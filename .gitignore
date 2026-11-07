@@ -1,0 +1,7 @@
+**/.pio/
+.DS_Store
+*.local.h
+**/.flash-venv/
+**/__pycache__/
+**/network-settings.bin
+**/network-settings.csv

@@ -1,0 +1,27 @@
+{
+  "board": "lolin_s2_mini",
+  "chip": "esp32s2",
+  "platform": "espressif32@6.12.0",
+  "arduino": "2.0.17",
+  "esptool": "4.9.0",
+  "sha256": {
+    "boot_app0.bin": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0",
+    "master/bootloader.bin": "34d00eaa9ea72a54d1319d8a91f3b6c3acccf9478e85ba4c75f97034749dc977",
+    "master/firmware.bin": "3f30901fd05edf2f4f73af12ca09c9d94a280bf752608bfee221e736ff654b67",
+    "master/partitions.bin": "148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1",
+    "receiver/bootloader.bin": "34d00eaa9ea72a54d1319d8a91f3b6c3acccf9478e85ba4c75f97034749dc977",
+    "receiver/firmware.bin": "b69af74d1e151c438bf9800ca75a93a96d5ef3bf41ab787bfcc1c49fa4c1f500",
+    "receiver/partitions.bin": "148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1"
+  },
+  "source_sha256": {
+    "include/tally.h": "81597563b8005b56740c48bfcbddc3273c883ed48056d5cbb1c557041b717574",
+    "lib/ATEMbase/ATEMbase.cpp": "aa6ed13d681aae9a55fbe6039a817b52264bb239bfe9d1d0ba2de27772e71c73",
+    "lib/ATEMbase/ATEMbase.h": "b7abbada979e5500ec3d44b8926cb02c9efb6ed6fad4941219f0f2965baeeaad",
+    "lib/ATEMmin/ATEMmin.cpp": "74d3321d02053e78523e59f24bc8b6f015dd14444e663a2325f31a22a1f0afff",
+    "lib/ATEMmin/ATEMmin.h": "c9dc36dbb13eb12d20f3230376d316359ed3c7a46ea9b5494bcbf619f603a63e",
+    "lib/SkaarhojPgmspace/SkaarhojPgmspace.h": "fd54ef150f88f786b02184a84ef3132eca3bac67c24a879d3a2e14f53a79da6a",
+    "platformio.ini": "be475b4a7be14e899a77846e64874f8dd456c29e8ecee2b56992723d8d7637e4",
+    "src/master.cpp": "107842fe99a4babb05b4fcf9c2c4dc73eac60a19378bc2947605eed01d36a3e5",
+    "src/receiver.cpp": "1c78fbd5554db8f8c2575b6cfcb8b37a36b3baa69d3d7550a997f15d1241a6dd"
+  }
+}

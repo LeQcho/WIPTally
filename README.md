@@ -1,3 +1,11 @@
+# ATEM Tally · Wemos LOLIN S2 Mini
+
+**Portage Wi-Fi master + ESP-NOW receivers : [guide français, flash et tests](S2Mini/README.fr.md).**
+
+Les nouveaux firmwares sont dans `S2Mini/firmware`. Les dossiers Controller et Receiver ci-dessous concernent le matériel historique WT32 / ESP8266.
+
+---
+
 # Tally System for ATEM Switcher using ESP-Now
 
 Commercial tally systems that signal whether a camera is currently live or in preview are quite expensive. This project enables you to create such a system for a fraction of the cost.
