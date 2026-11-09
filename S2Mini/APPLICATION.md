@@ -17,7 +17,7 @@ Si macOS bloque le lancement d'une application locale non signée, le lanceur `.
 1. Choisir **Master**.
 2. Saisir le SSID **2,4 GHz**, le mot de passe Wi-Fi, l'adresse IPv4 de l'ATEM et le **nombre d'entrées caméra utilisées**, entre 1 et 40. Le mot de passe est requis, sauf si la case « Réseau ouvert, sans mot de passe » est explicitement cochée.
 3. Brancher la S2 Mini destinée à devenir master et sélectionner son port USB.
-4. Cliquer **Flasher le master**. Attendre le message de réussite : la carte est redémarrée automatiquement si son USB revient en mode application. Sinon, le message demande d’appuyer sur **RST sans maintenir BOOT**.
+4. Cliquer **Flasher le master**. Attendre la vérification et le redémarrage automatique. Si le port USB de la S2 Mini ne revient pas, couper puis rétablir son alimentation USB.
 
 Les paramètres sont écrits dans la mémoire de configuration pendant le flash. Le master démarre directement avec ces réglages. Le champ « Entrées caméra utilisées » limite les entrées diffusées par le master : pour 8, seules les entrées 1 à 8 sont utilisées ; les flags 9 à 40 sont remis à zéro. Ce champ ne reconfigure pas la topologie ou les entrées du mélangeur Blackmagic. Une entrée supérieure au nombre configuré ne donnera pas de tally sur un récepteur.
 
@@ -29,7 +29,7 @@ Les anciennes cartes sans valeur `inputs` mémorisée conservent la limite histo
 2. Choisir sa **caméra de 1 à 40**, avec les boutons rapides ou le champ numérique.
 3. Choisir **Deux LED RGB WS2812** ou **LED intégrée / sorties rouge et verte**. Pour les WS2812, choisir l’ordre des couleurs RGB ou GRB et la luminosité. Les choix 25, 50, 75 et 100 % correspondent à 64, 130, 191 et 255 sur 255. Le réglage par défaut est 50 %.
 4. Brancher la carte concernée, vérifier le port et cliquer **Flasher le récepteur**.
-5. Après réussite, appuyer sur RST sans toucher BOOT.
+5. Attendre le redémarrage automatique après la vérification du flash.
 
 La carte démarre avec le numéro exact choisi, mémorisé sous `tally-rx/camera`. Aucun mot de passe Wi-Fi n'est écrit sur un récepteur. L’intensité est écrite dans les réglages du récepteur au moment du flash. Les boutons BOOT et la commande série `cam N` restent disponibles pour changer de caméra plus tard. Pour les WS2812, suivre [le guide de câblage](LED-RGB.md).
 
@@ -37,7 +37,7 @@ La carte démarre avec le numéro exact choisi, mémorisé sous `tally-rx/camera
 
 **Vérifier la préparation sans flasher** contrôle les champs, les sommes SHA-256 des images et la génération de la configuration. Cette action fonctionne même sans carte connectée et n'écrit rien sur l'USB.
 
-Le journal affiche la connexion, l'écriture et les vérifications effectuées par esptool. Une opération à la fois est autorisée. La S2 Mini peut disparaître brièvement du port pendant son passage en mode téléchargement : l'application retente la connexion une fois, uniquement si aucune opération d'effacement ou d'écriture n'a commencé.
+Le journal affiche la connexion, l’écriture et les vérifications effectuées par esptool. Le redémarrage watchdog est demandé dans la même session, après l’écriture. Atelier cherche le port USB de la S2 Mini en mode application, y compris si son nom a changé. Sur la C3, le port USB identique dans les deux modes permet de signaler l’envoi de la commande, mais la confirmation du démarrage se fait sur le voyant. Une opération à la fois est autorisée. La S2 Mini peut disparaître brièvement du port pendant son passage en mode téléchargement : l'application retente la connexion une fois, uniquement si aucune opération d'effacement ou d'écriture n'a commencé.
 
 Si la carte ne répond pas : fermer les moniteurs série, maintenir BOOT, appuyer puis relâcher RST, relâcher BOOT, actualiser les ports et relancer. Un flash remplace le firmware et la partition de réglages de la carte sélectionnée. Les autres cartes alimentées ailleurs continuent à fonctionner.
 

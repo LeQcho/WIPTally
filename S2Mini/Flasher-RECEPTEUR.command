@@ -7,5 +7,4 @@ if [[ ! -x .flash-venv/bin/python ]]; then
 fi
 .flash-venv/bin/python -m pip -q install -r requirements-flash.txt
 .flash-venv/bin/python flash.py receiver 2>&1 | tee flash-receiver.log
-print "Flash termine. Appuie maintenant sur RST sans toucher a BOOT."
 read -r "?Appuie sur Entree pour fermer..."

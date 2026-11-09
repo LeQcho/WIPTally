@@ -39,7 +39,7 @@ Débrancher cette carte, brancher une autre S2 Mini, puis :
 .flash-venv/bin/python flash.py receiver
 ```
 
-Appuyer sur **RST**, sans maintenir BOOT, après chaque flash. Le script conserve volontairement le mode téléchargement pour éviter les erreurs de déconnexion USB lors d'un reset automatique. Les firmwares démarrent aussi sur batterie / alimentation USB sans ordinateur.
+Attendre le redémarrage automatique après l’écriture. Si le port USB de la carte ne revient pas, couper puis rétablir son alimentation. Les firmwares démarrent aussi sur batterie ou alimentation USB sans ordinateur.
 
 Si plusieurs ports existent :
 

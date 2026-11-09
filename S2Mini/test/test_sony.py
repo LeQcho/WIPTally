@@ -47,11 +47,13 @@ class SonyTests(unittest.TestCase):
             def __exit__(self, *args): pass
             def kill(self): pass
             def wait(self): return 0
-        with patch('desktop.backend.subprocess.Popen',side_effect=Process) as process, patch.object(FlashJobs, '_restart', return_value=False):
+        with patch('desktop.usb_flash.subprocess.Popen',side_effect=Process) as process:
             FlashJobs()._flash(validate(SONY), Path('/tmp/chosen-sony-settings.bin'))
             command = process.call_args.args[0]
             self.assertEqual(command[command.index('--chip')+1], 'esp32c3')
             self.assertEqual(command[command.index('--port')+1], 'SONY-USB')
+            self.assertEqual(command[command.index('--after')+1], 'watchdog_reset')
+            self.assertEqual(process.call_count, 1)
             self.assertIn('0x0', command)
             self.assertNotIn('0x1000', command)
             self.assertEqual(command[command.index('0x9000')+1], '/tmp/chosen-sony-settings.bin')

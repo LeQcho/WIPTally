@@ -6,6 +6,7 @@ import sys
 import tempfile
 import threading
 import time
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from urllib.request import Request, urlopen
@@ -14,6 +15,7 @@ from urllib.error import HTTPError
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from desktop.backend import FlashJobs, make_settings, settings_rows, validate
 from desktop.server import create_server
+from desktop.usb_flash import POWER_CYCLE, restart_message, write_verified
 
 MASTER = {"role":"master", "ssid":"Réseau, test", "password":"mot-de-passe", "atem":"192.0.2.10", "inputs":8, "port":"SIMULATION"}
 
@@ -33,7 +35,7 @@ class SettingsTests(unittest.TestCase):
             def __exit__(self, *args): pass
             def kill(self): pass
             def wait(self): return 0
-        with tempfile.TemporaryDirectory() as tmp, patch('desktop.backend.subprocess.Popen',side_effect=Process) as process, patch.object(FlashJobs,'_restart',return_value=False):
+        with tempfile.TemporaryDirectory() as tmp, patch('desktop.usb_flash.subprocess.Popen',side_effect=Process) as process, patch('desktop.backend.restart_message',return_value=POWER_CYCLE):
             settings=Path(tmp)/'chosen.bin';settings.write_bytes(b'x'*0x5000)
             jobs=FlashJobs()
             jobs._flash({'role':'receiver-rgb','port':'SELECTED-USB'},settings)
@@ -42,6 +44,8 @@ class SettingsTests(unittest.TestCase):
             self.assertEqual(command[command.index('0x9000')+1],str(settings))
             self.assertTrue(any('receiver-rgb' in value for value in command))
             self.assertFalse(any('network-settings.bin' in value for value in command))
+            self.assertEqual(command[command.index('--after')+1], 'watchdog_reset')
+            self.assertEqual(process.call_count, 1)
 
     def test_camera_preconfiguration_and_master_input_count(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -83,14 +87,27 @@ class SettingsTests(unittest.TestCase):
         classic = validate({"role": "receiver", "rgb_brightness": "100"})
         self.assertNotIn("rgb_level", classic)
 
-    def test_restart_is_reported_only_when_application_usb_returns(self):
-        from types import SimpleNamespace
-        with patch('desktop.backend.subprocess.run') as run, patch('desktop.backend.list_ports.comports',return_value=[SimpleNamespace(device='USB',vid=0x303a,pid=0x80c2)]):
-            self.assertTrue(FlashJobs()._restart('USB'))
-            self.assertIn('watchdog_reset',run.call_args.args[0])
-            self.assertIn('no_reset',run.call_args.args[0])
-        with patch('desktop.backend.subprocess.run',side_effect=OSError('test')):
-            self.assertFalse(FlashJobs()._restart('USB'))
+    def test_restart_follows_the_same_usb_device_after_renumbering(self):
+        original = SimpleNamespace(device='COM5', location='1-2:1.0')
+        other = SimpleNamespace(device='COM5', vid=0x303a, pid=0x80c2, location='1-3:1.0')
+        target = SimpleNamespace(device='COM7', vid=0x303a, pid=0x80c2, location='1-2:1.1')
+        logs = []
+        with patch('desktop.usb_flash.list_ports.comports', side_effect=[[other], [other, target]]), patch('desktop.usb_flash.time.sleep'):
+            result = restart_message(original.device, original, 'esp32s2', 0, logs.append)
+        self.assertIn('redémarrée automatiquement', result)
+        self.assertIn('COM7', logs[0])
+
+    def test_restart_fallback_uses_power_cycle_when_only_bootloader_returns(self):
+        boot = SimpleNamespace(device='USB', vid=0x303a, pid=2)
+        with patch('desktop.usb_flash.list_ports.comports', return_value=[boot]), patch('desktop.usb_flash.time.sleep'):
+            self.assertEqual(restart_message('USB', boot, 'esp32s2', 0, lambda _: None), POWER_CYCLE)
+
+    def test_reset_error_does_not_turn_verified_images_into_a_flash_failure(self):
+        hashes = ['Hash of data verified.'] * 5
+        reset = 'Hard resetting with a watchdog...'
+        self.assertTrue(write_verified(2, hashes + [reset], 5))
+        self.assertFalse(write_verified(2, hashes[:-1] + [reset], 5))
+        self.assertFalse(write_verified(2, hashes, 5))
 
     def test_single_flash_and_cleanup(self):
         jobs = FlashJobs(simulate=True)

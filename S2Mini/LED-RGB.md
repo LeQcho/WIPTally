@@ -48,7 +48,7 @@ Ce schéma utilise une seule source 5 V USB commune. Ne pas rajouter une seconde
 
 ## Flash et choix de caméra
 
-Pour un flash avec les réglages déjà mémorisés, lancer **Flasher-RECEPTEUR-RGB.command**, puis appuyer sur RST sans toucher BOOT après le flash. Le script écrit le firmware RGB en conservant le numéro de caméra déjà mémorisé. Une carte neuve est caméra 1.
+Pour un flash avec les réglages déjà mémorisés, lancer **Flasher-RECEPTEUR-RGB.command** et attendre le redémarrage automatique. Le script écrit le firmware RGB en conservant le numéro de caméra déjà mémorisé. Une carte neuve est caméra 1.
 
 En ligne de commande :
 

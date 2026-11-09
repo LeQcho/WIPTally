@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 from serial.tools import list_ports
+from .usb_flash import AFTER_WRITE, restart_message, run_write, write_verified
 
 ROOT = Path(__file__).resolve().parents[1]
 ROLES = {"master", "receiver", "receiver-rgb", "sony-c3"}
@@ -189,13 +190,12 @@ class FlashJobs:
                         self.log(line)
                         time.sleep(0.15)
                 else:
-                    restarted = self._flash(config, settings)
+                    flash_message = self._flash(config, settings)
             # Temporary CSV and binary, including the Wi-Fi password, are removed.
             with self.lock:
                 self.job.update(status="success", message="Vérification réussie — aucune écriture USB." if check_only else
                                 "Simulation terminée — aucune écriture USB." if self.simulate else
-                                "Flash vérifié. Carte redémarrée automatiquement." if restarted else
-                                "Flash vérifié. Appuie sur RST sans toucher BOOT pour démarrer la carte.")
+                                flash_message)
         except Exception as exc:
             # Show only controlled messages; never stringify arbitrary generator data.
             message = str(exc) if isinstance(exc, ValueError) else "Opération interrompue. Vérifier le câble USB et relancer."
@@ -204,31 +204,19 @@ class FlashJobs:
                 self.job.update(status="error", message=message)
 
     def _flash(self, config, settings):
-        base = [sys.executable, "-u", "-m", "esptool", "--chip", chip_for(config["role"]), "--port", config["port"],
-                "--baud", "460800", "--before", "default_reset", "--after", "no_reset",
+        chip, device = chip_for(config["role"]), config["port"]
+        original = next((port for port in list_ports.comports() if port.device == device), None)
+        base = [sys.executable, "-u", "-m", "esptool", "--chip", chip, "--port", device,
+                "--baud", "460800", "--before", "default_reset", *AFTER_WRITE,
                 "write_flash", "-z", "--flash_mode", "dio", "--flash_freq", "80m", "--flash_size", "4MB"]
         firmware = images(config["role"])
         firmware.insert(2, ("0x9000", settings))
         command = base + [str(value) for pair in firmware for value in pair]
         for attempt in range(2):
-            wrote = False
-            output = []
-            with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                                  encoding="utf-8", errors="replace") as process:
-                # Kill a wedged USB operation; the timer never outlives this process.
-                timer = threading.Timer(180, process.kill)
-                timer.start()
-                try:
-                    for line in process.stdout:
-                        line = line.rstrip()
-                        wrote |= "Writing at" in line or "Flash will be erased" in line
-                        output.append(line)
-                        self.log(line)
-                    code = process.wait()
-                finally:
-                    timer.cancel()
-            if code == 0:
-                return self._restart(config["port"], chip_for(config["role"]))
+            code, output = run_write(command, self.log)
+            if write_verified(code, output, len(firmware)):
+                return restart_message(device, original, chip, code, self.log)
+            wrote = any("Writing at" in line or "Flash will be erased" in line for line in output)
             # Native USB re-enumerates on the first reset. Retry only before any
             # erase/write and only if the originally selected port is still here.
             usb_transition = any("Device not configured" in x or "Could not configure port" in x for x in output)
@@ -241,21 +229,4 @@ class FlashJobs:
                 else:
                     raise ValueError("La carte n'est pas réapparue sur le port choisi. Actualiser les ports et relancer.")
                 continue
-            raise ValueError("Flash non terminé. Maintenir BOOT, appuyer sur RST, relâcher BOOT, puis relancer le flash.")
-
-    def _restart(self, port, chip="esp32s2"):
-        self.log("Écriture vérifiée. Redémarrage de la carte…")
-        try:
-            result = subprocess.run([sys.executable, "-m", "esptool", "--chip", chip, "--port", port,
-                            "--before", "no_reset", "--after", "hard_reset" if chip == "esp32c3" else "watchdog_reset", "read_mac"], capture_output=True, timeout=20)
-            if chip == "esp32c3":
-                return result.returncode == 0
-            for _ in range(20):
-                if any(p.device == port and p.vid == 0x303a and p.pid == 0x80c2 for p in list_ports.comports()):
-                    self.log("La carte est revenue en mode application USB.")
-                    return True
-                time.sleep(.25)
-        except (OSError, subprocess.TimeoutExpired):
-            pass
-        self.log("Flash réussi ; appuie sur RST sans BOOT pour démarrer la carte.")
-        return False
+            raise ValueError("Flash non terminé. Rebrancher la carte et réessayer. Si nécessaire, la placer en mode téléchargement avec BOOT et RST.")

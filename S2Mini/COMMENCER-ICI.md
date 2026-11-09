@@ -1,4 +1,4 @@
-# Tally Atelier 1.4.0 — démarrer ici
+# Tally Atelier 1.4.1 — démarrer ici
 
 Double-cliquer sur **Tally Atelier.app** (Mac), **Lancer-Tally.command** (Terminal Mac) ou **Lancer-Tally.bat** (Windows). Python 3 et Internet sont nécessaires au premier lancement pour installer les dépendances de flash ; les firmwares sont déjà compilés.
 
@@ -8,7 +8,7 @@ Double-cliquer sur **Tally Atelier.app** (Mac), **Lancer-Tally.command** (Termin
 - **Récepteur** : S2 Mini, choisir le numéro de caméra et les LED. Liaison ESP-NOW au master.
 - **Tally Sony** : **LOLIN C3 Mini**, voyant REC autonome en Bluetooth LE pour Sony A7 IV. La S2 Mini n’a pas de Bluetooth et ne convient pas à ce profil.
 
-Renseigner les réglages, brancher une seule carte compatible, puis utiliser **Vérifier la préparation sans flasher** ou le bouton de flash. Le type de puce est vérifié avant écriture. Les profils Sony et ATEM ont des binaires distincts.
+Renseigner les réglages, brancher une seule carte compatible, puis utiliser **Vérifier la préparation sans flasher** ou le bouton de flash. Le type de puce est vérifié avant écriture. Après vérification, la carte reçoit sa commande de redémarrage automatique. Les profils Sony et ATEM ont des binaires distincts.
 
 Le profil Sony est un **prototype à valider sur caméra**. Voir [SONY.md](SONY.md) pour le câblage GPIO4, l’appairage et les essais REC/STOP. Il indique rouge pour REC confirmé, éteint pour arrêt confirmé, bleu clignotant pour état inconnu ou liaison perdue.
 

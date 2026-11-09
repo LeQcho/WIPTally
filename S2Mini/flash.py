@@ -5,7 +5,6 @@ import hashlib
 import importlib.metadata
 import json
 from pathlib import Path
-import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent
@@ -19,6 +18,7 @@ def main():
     args = parser.parse_args()
     try:
         from serial.tools import list_ports
+        from desktop.usb_flash import AFTER_WRITE, restart_message, run_write, write_verified
         version = importlib.metadata.version("esptool")
     except (ImportError, importlib.metadata.PackageNotFoundError):
         parser.error("Installer d'abord les dependances : python -m pip install -r requirements-flash.txt")
@@ -45,8 +45,8 @@ def main():
         if (ROOT / "firmware" / "network-settings.bin").stat().st_size != 0x5000:
             parser.error("Taille de partition NVS personnelle incorrecte")
         images.insert(2, ("0x9000", "network-settings.bin"))
-    command = [sys.executable, "-m", "esptool", "--chip", "esp32s2", "--port", port,
-               "--baud", "460800", "--before", "default_reset", "--after", "no_reset",
+    command = [sys.executable, "-u", "-m", "esptool", "--chip", "esp32s2", "--port", port,
+               "--baud", "460800", "--before", "default_reset", *AFTER_WRITE,
                "write_flash", "-z", "--flash_mode", "dio", "--flash_freq", "80m", "--flash_size", "4MB"]
     for address, relative in images:
         file = ROOT / "firmware" / relative
@@ -59,10 +59,14 @@ def main():
         print("DRY RUN : images verifiees, aucune ecriture USB.")
         print(command)
         return 0
-    result = subprocess.run(command, check=False).returncode
-    if result == 0:
-        print("Ecriture verifiee. Appuie sur RST, sans toucher a BOOT, pour demarrer la carte.")
-    return result
+    original = next((candidate for candidate in ports if candidate.device == port), None)
+    def log(line):
+        print(line, flush=True)
+    exit_code, output = run_write(command, log)
+    if write_verified(exit_code, output, len(images)):
+        print(restart_message(port, original, "esp32s2", exit_code, log))
+        return 0
+    return exit_code
 
 
 if __name__ == "__main__":
