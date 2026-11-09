@@ -10,7 +10,7 @@ import time
 import socket
 import webbrowser
 from .backend import ROOT, FlashJobs, ports
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 INSTALLATION = hashlib.sha256(str(ROOT).encode()).hexdigest()[:12]
 
 

@@ -50,6 +50,7 @@ class SettingsTests(unittest.TestCase):
             self.assertEqual(len(binary), 0x5000)
             self.assertEqual(stored_byte(binary, "camera"), 6)
             self.assertEqual(stored_byte(binary, "rgb_order"), 1)
+            self.assertEqual(stored_byte(binary, "rgb_level"), 130)
             self.assertNotIn(b"mot-de-passe", binary)
             binary = make_settings(validate(MASTER), Path(tmp)).read_bytes()
             self.assertEqual(stored_byte(binary, "inputs"), 8)
@@ -69,6 +70,18 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(validate({**MASTER,"password":"","open_wifi":True})["password"],"")
         self.assertEqual(validate({"role":"receiver-rgb","camera":2,"rgb_order":"GRB"})['rgb_order'],'GRB')
         with self.assertRaises(ValueError): validate({"role":"receiver-rgb","camera":2,"rgb_order":"BGR"})
+
+    def test_rgb_brightness_reaches_flash_settings(self):
+        for percentage, level in (("25", 64), ("50", 130), ("75", 191), ("100", 255)):
+            with self.subTest(percentage=percentage), tempfile.TemporaryDirectory() as tmp:
+                config = validate({"role": "receiver-rgb", "rgb_brightness": percentage})
+                settings = make_settings(config, Path(tmp)).read_bytes()
+                self.assertEqual(stored_byte(settings, "rgb_level"), level)
+        for invalid in (0, 60, 101, True, None):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                validate({"role": "receiver-rgb", "rgb_brightness": invalid})
+        classic = validate({"role": "receiver", "rgb_brightness": "100"})
+        self.assertNotIn("rgb_level", classic)
 
     def test_restart_is_reported_only_when_application_usb_returns(self):
         from types import SimpleNamespace

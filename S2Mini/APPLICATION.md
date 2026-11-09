@@ -27,11 +27,11 @@ Les anciennes cartes sans valeur `inputs` mémorisée conservent la limite histo
 
 1. Choisir **Récepteur**.
 2. Choisir sa **caméra de 1 à 40**, avec les boutons rapides ou le champ numérique.
-3. Choisir **Deux LED RGB WS2812** ou **LED intégrée / sorties rouge et verte**. Pour les RGB : choisir RGB ou GRB selon l’ordre de couleurs du ruban.
+3. Choisir **Deux LED RGB WS2812** ou **LED intégrée / sorties rouge et verte**. Pour les WS2812, choisir l’ordre des couleurs RGB ou GRB et la luminosité. Les choix 25, 50, 75 et 100 % correspondent à 64, 130, 191 et 255 sur 255. Le réglage par défaut est 50 %.
 4. Brancher la carte concernée, vérifier le port et cliquer **Flasher le récepteur**.
 5. Après réussite, appuyer sur RST sans toucher BOOT.
 
-La carte démarre avec le numéro exact choisi, mémorisé sous `tally-rx/camera`. Aucun mot de passe Wi-Fi n'est écrit sur un récepteur. Les boutons BOOT et la commande série `cam N` restent disponibles pour changer de caméra plus tard. Pour les WS2812, suivre [le guide de câblage](LED-RGB.md).
+La carte démarre avec le numéro exact choisi, mémorisé sous `tally-rx/camera`. Aucun mot de passe Wi-Fi n'est écrit sur un récepteur. L’intensité est écrite dans les réglages du récepteur au moment du flash. Les boutons BOOT et la commande série `cam N` restent disponibles pour changer de caméra plus tard. Pour les WS2812, suivre [le guide de câblage](LED-RGB.md).
 
 ## Vérifier et lire le résultat
 

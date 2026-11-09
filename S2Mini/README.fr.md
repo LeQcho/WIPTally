@@ -69,9 +69,17 @@ Le script vérifie les sommes SHA-256 et cible explicitement **esp32s2**. Il éc
 
 Le master suit le canal du point d'accès Wi-Fi. Les récepteurs parcourent automatiquement les canaux 1 à 13 lorsqu'ils n'entendent plus le master. Aucun réglage de canal ni appairage MAC n'est requis pour le test. Un canal fixe du routeur rend néanmoins le comportement plus prévisible. Le domaine radio du récepteur est CH (canaux 1–13), à adapter avant utilisation dans une autre région.
 
+## ESP-NOW Long Range
+
+Le master 1.4 configure le débit radio **Long Range à 250 kbit/s** pour les trames ESP-NOW. Sa connexion au routeur utilise les protocoles Wi-Fi habituels. Les récepteurs 1.4 acceptent les trames Long Range et standard sur le canal du master. Si le pilote refuse le débit Long Range, le master tente le débit standard et indique le résultat dans le journal série.
+
+Pour passer d’une version antérieure à 1.4, flasher **les récepteurs d’abord, puis le master**. Les anciens récepteurs ne sont pas prévus pour décoder les trames Long Range du nouveau master. Après la mise à jour, contrôler les messages Long Range au démarrage, puis tester les changements Programme/Preview à la distance d’utilisation. Les compilations et tests hôtes vérifient le logiciel. La portée se mesure sur les cartes en conditions réelles.
+
+[Débits ESP32-S2 documentés par Espressif](https://docs.espressif.com/projects/esp-idf/en/release-v4.4/esp32s2/api-reference/network/esp_wifi.html)
+
 ## Deux LED RGB WS2812 5 V
 
-La variante `receiver-rgb` pilote deux WS2812 sur GPIO18 : bleu en recherche, vert en Preview, rouge en Programme. Les détails de câblage, la conversion logique 3,3 → 5 V, les états supplémentaires et la validation sont dans [LED-RGB.md](LED-RGB.md). Le choix de caméra est conservé lors du flash. Le master déjà installé est compatible.
+La variante `receiver-rgb` pilote deux WS2812 sur GPIO18 : bleu en recherche, vert en Preview, rouge en Programme. Les détails de câblage, la conversion logique 3,3 → 5 V, les états supplémentaires et la validation sont dans [LED-RGB.md](LED-RGB.md). Tally Atelier permet de choisir la caméra, l’ordre des couleurs et la luminosité avant le flash.
 
 ```sh
 .flash-venv/bin/python flash.py receiver-rgb

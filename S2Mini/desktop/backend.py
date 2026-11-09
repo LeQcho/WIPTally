@@ -15,6 +15,7 @@ from serial.tools import list_ports
 
 ROOT = Path(__file__).resolve().parents[1]
 ROLES = {"master", "receiver", "receiver-rgb", "sony-c3"}
+RGB_LEVELS = {"25": 64, "50": 130, "75": 191, "100": 255}
 
 
 def chip_for(role):
@@ -74,6 +75,11 @@ def validate(data):
         result["rgb_order"] = data.get("rgb_order", "RGB")
         if result["rgb_order"] not in ("RGB", "GRB"):
             raise ValueError("Choisir l'ordre des couleurs RGB ou GRB.")
+        if role == "receiver-rgb":
+            level = RGB_LEVELS.get(str(data.get("rgb_brightness", "50")))
+            if level is None:
+                raise ValueError("Choisir une luminosité de 25, 50, 75 ou 100 %.")
+            result["rgb_level"] = level
     return result
 
 
@@ -96,6 +102,7 @@ def settings_rows(config):
     rows = [("tally-rx", "namespace", "", ""), ("camera", "data", "u8", config["camera"])]
     if config["role"] == "receiver-rgb":
         rows.append(("rgb_order", "data", "u8", int(config["rgb_order"] == "RGB")))
+        rows.append(("rgb_level", "data", "u8", config["rgb_level"]))
     return rows
 
 

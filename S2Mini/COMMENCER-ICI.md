@@ -1,4 +1,4 @@
-# Tally Atelier 1.3.0 — démarrer ici
+# Tally Atelier 1.4.0 — démarrer ici
 
 Double-cliquer sur **Tally Atelier.app** (Mac), **Lancer-Tally.command** (Terminal Mac) ou **Lancer-Tally.bat** (Windows). Python 3 et Internet sont nécessaires au premier lancement pour installer les dépendances de flash ; les firmwares sont déjà compilés.
 

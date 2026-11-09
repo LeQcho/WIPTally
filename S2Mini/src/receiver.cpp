@@ -4,13 +4,15 @@
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include "tally.h"
+#include "espnow_radio.h"
 #ifdef TALLY_WS2812
 #include <Adafruit_NeoPixel.h>
 #include "rgb_status.h"
 Adafruit_NeoPixel pixels(tally::kRgbPixels, tally::kRgbDataPin, NEO_RGB + NEO_KHZ800);
 uint32_t displayedRgb = UINT32_MAX;
+uint8_t rgbLevel = tally::kDefaultRgbLevel;
 void showRgb(tally::State state, uint32_t now) {
-  const auto color = tally::rgbStatus(state, now);
+  const auto color = tally::rgbStatus(state, now, rgbLevel);
   const uint32_t packed = pixels.Color(color.r, color.g, color.b);
   if (packed == displayedRgb) return;
   for (uint8_t i = 0; i < tally::kRgbPixels; ++i) pixels.setPixelColor(i, packed);
@@ -62,18 +64,23 @@ void setup() {
 #ifdef TALLY_WS2812
   // This rig's pixels swap red/green with GRB. Allow standard GRB modules too.
   const bool rgbOrder = prefs.getUChar("rgb_order", 1) != 0;
+  rgbLevel = prefs.getUChar("rgb_level", tally::kDefaultRgbLevel);
+  if (rgbLevel == 0) rgbLevel = tally::kDefaultRgbLevel;
   pixels.updateType((rgbOrder ? NEO_RGB : NEO_GRB) + NEO_KHZ800);
   pixels.begin();
   showRgb(tally::State::Lost, millis());
   Serial.printf("RGB WS2812: %u pixels, GPIO%u, intensite %u/255\n",
-      tally::kRgbPixels, tally::kRgbDataPin, tally::kRgbLevel);
-  Serial.printf("RGB ordre=%s fw=receiver-rgb-2\n", rgbOrder ? "RGB" : "GRB");
+      tally::kRgbPixels, tally::kRgbDataPin, rgbLevel);
+  Serial.printf("RGB ordre=%s fw=receiver-rgb-3\n", rgbOrder ? "RGB" : "GRB");
 #endif
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   // Country CH permits channels 1..13; receiver never associates to the router.
   wifi_country_t country = {"CH", 1, 13, 20, WIFI_COUNTRY_POLICY_MANUAL};
   esp_wifi_set_country(&country);
+  const auto protocol = tally::enableLongRange();
+  if (protocol == ESP_OK) Serial.println("ESP-NOW: reception Long Range et standard configuree");
+  else Serial.printf("ESP-NOW: protocole Long Range refuse (%d)\n", protocol);
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
   if (esp_now_init() != ESP_OK || esp_now_register_recv_cb(onReceive) != ESP_OK)
     Serial.println("ERREUR initialisation ESP-NOW");

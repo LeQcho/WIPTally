@@ -1,6 +1,6 @@
 # Deux WS2812 5 V sur un récepteur S2 Mini
 
-Le firmware `receiver-rgb` commande deux pixels RGB WS2812/NeoPixel en chaîne à partir de **GPIO18**. Les deux pixels affichent le même état. Le numéro de caméra et le protocole radio restent ceux du récepteur existant : le master actuellement installé est compatible.
+Le firmware `receiver-rgb` commande deux pixels RGB WS2812/NeoPixel en chaîne à partir de **GPIO18**. Les deux pixels affichent le même état. Les récepteurs 1.4 acceptent ESP-NOW Long Range et les trames du master standard.
 
 | État | Les deux LED |
 |---|---|
@@ -10,7 +10,7 @@ Le firmware `receiver-rgb` commande deux pixels RGB WS2812/NeoPixel en chaîne �
 | Master reçu, ATEM pas prêt | Bleu clignotant, période 1 s |
 | Caméra ni en Preview ni en Programme | Éteintes |
 
-Programme reste prioritaire si les deux flags sont actifs. Une perte du master fait revenir au bleu au bout de 1,8 s. La détection d'une coupure ATEM par le master prend environ 5 s sans réponse. L'intensité initiale est de 64/255 par canal, modifiable par `kRgbLevel` dans `include/rgb_status.h` avant recompilation.
+Programme reste prioritaire si les deux flags sont actifs. Une perte du master fait revenir au bleu au bout de 1,8 s. La détection d'une coupure ATEM par le master prend environ 5 s sans réponse. Dans Tally Atelier, choisir 25, 50, 75 ou 100 % dans le profil **Récepteur RGB**. Cela correspond aux valeurs 64, 130, 191 et 255 par canal. La valeur par défaut est 130 sur 255. Les deux pixels utilisent le niveau enregistré lors du flash.
 
 ## Matériel
 
@@ -48,7 +48,7 @@ Ce schéma utilise une seule source 5 V USB commune. Ne pas rajouter une seconde
 
 ## Flash et choix de caméra
 
-Dans le kit personnel, lancer **Flasher-RECEPTEUR-RGB.command**, puis appuyer sur RST sans toucher BOOT après le flash. Le script écrit le firmware RGB en conservant le numéro de caméra déjà mémorisé. Une carte neuve est caméra 1.
+Pour un flash avec les réglages déjà mémorisés, lancer **Flasher-RECEPTEUR-RGB.command**, puis appuyer sur RST sans toucher BOOT après le flash. Le script écrit le firmware RGB en conservant le numéro de caméra déjà mémorisé. Une carte neuve est caméra 1.
 
 En ligne de commande :
 

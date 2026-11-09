@@ -8,6 +8,7 @@
 #include <ATEMmin.h>
 #include "tally.h"
 #include "atem_sync_guard.h"
+#include "espnow_radio.h"
 
 Preferences prefs;
 WebServer web(80);
@@ -16,6 +17,7 @@ String ssid, password, atemAddress;
 uint8_t cameraInputs = tally::kInputs;
 bool demo = false, configOpen = false, hadWifi = false;
 bool radioReady = false;
+bool longRangeEnabled = false;
 uint32_t sentAt = 0, sampledAt = 0, sequence = 0, retryAt = 0, buttonAt = 0;
 uint32_t statusAt = 0;
 AtemSyncGuard syncGuard;
@@ -24,6 +26,19 @@ uint32_t radioQueued = 0, radioErrors = 0;
 String formToken;
 tally::Packet previous;
 const uint8_t broadcastMac[6] = {255,255,255,255,255,255};
+
+void configureTallyRate() {
+  if (!radioReady || !longRangeEnabled) return;
+  const auto result = esp_wifi_config_espnow_rate(WIFI_IF_STA, WIFI_PHY_RATE_LORA_250K);
+  if (result == ESP_OK) {
+    Serial.println("ESP-NOW: Long Range 250 kbit/s configure");
+    return;
+  }
+  Serial.printf("ESP-NOW: debit Long Range refuse (%d)\n", result);
+  const auto fallback = esp_wifi_config_espnow_rate(WIFI_IF_STA, WIFI_PHY_RATE_1M_L);
+  if (fallback == ESP_OK) Serial.println("ESP-NOW: debit standard 1 Mbit/s");
+  else Serial.printf("ESP-NOW: debit standard refuse (%d)\n", fallback);
+}
 
 bool configClient() {
   if (configOpen && web.client().localIP() == WiFi.softAPIP()) return true;
@@ -88,13 +103,15 @@ void setup() {
   if (cameraInputs < 1 || cameraInputs > tally::kInputs) cameraInputs = tally::kInputs;
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
+  const auto protocol = tally::enableLongRange();
+  longRangeEnabled = protocol == ESP_OK;
+  if (!longRangeEnabled) Serial.printf("ESP-NOW: protocole Long Range refuse (%d)\n", protocol);
   Serial.printf("MASTER MAC %s\n", WiFi.macAddress().c_str());
   if (ssid.isEmpty() || demo) {
     openConfig();
   } else {
     WiFi.begin(ssid.c_str(), password.c_str());
   }
-  // Keep normal b/g/n protocol: LR-only mode would break ordinary router Wi-Fi.
   radioReady = esp_now_init() == ESP_OK;
   esp_now_peer_info_t peer = {};
   memcpy(peer.peer_addr, broadcastMac, 6);
@@ -102,6 +119,7 @@ void setup() {
   peer.ifidx = WIFI_IF_STA;
   radioReady = radioReady && esp_now_add_peer(&peer) == ESP_OK;
   if (!radioReady) Serial.println("ERREUR initialisation ESP-NOW");
+  configureTallyRate();
   setupWeb();
 }
 
@@ -115,6 +133,7 @@ void loop() {
   bool wifi = WiFi.status() == WL_CONNECTED;
   if (!demo && wifi) {
     if (!hadWifi) {
+      configureTallyRate();
       IPAddress ip;
       if (ip.fromString(atemAddress)) {
         atem.begin(ip);
@@ -180,7 +199,7 @@ void loop() {
   digitalWrite(15, packet.ready ? HIGH : ((now / 500) % 2));
   if (now - statusAt >= 5000) {
     statusAt = now;
-    Serial.printf("STATUS fw=local-app-1 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
+    Serial.printf("STATUS fw=local-app-2 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
         wifi, WiFi.localIP().toString().c_str(), atemAddress.c_str(),
         atem.isConnected(), atem.isRejected(), atem.hasInitialized(),
         atem.getTallyByIndexSources(), packet.ready, packet.demo, packet.channel,

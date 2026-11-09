@@ -1,6 +1,6 @@
 # WIPTally
 
-Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** rejoint le Wi-Fi 2,4 GHz et transmet les états Programme et Preview aux récepteurs via ESP-NOW. **Tally Atelier** configure et flashe les cartes en USB.
+Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** rejoint le Wi-Fi 2,4 GHz et transmet les états Programme et Preview aux récepteurs via ESP-NOW. **Tally Atelier** configure et flashe les cartes en USB. La version 1.4 utilise ESP-NOW Long Range et propose quatre niveaux de luminosité pour les récepteurs RGB.
 
 ![Boîtier V4 avec quatre vis au couvercle et diffuseurs plats](hardware/boitier-tally/V4/apercu_geometrie_V4.png)
 
@@ -9,8 +9,10 @@ Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** re
 1. Télécharger ou cloner le dépôt, puis ouvrir [le dossier S2Mini](S2Mini).
 2. Lancer **Tally Atelier.app** ou **Lancer-Tally.command** sur Mac, **Lancer-Tally.bat** sur Windows. Le premier lancement installe les dépendances Python de flash. Les quatre profils disposent d'images compilées.
 3. Brancher le master avec un câble USB de données. Saisir le réseau Wi-Fi 2,4 GHz, l'adresse IP de l'ATEM et le nombre d'entrées utilisées. Vérifier la préparation, puis flasher.
-4. Brancher un récepteur, sélectionner son numéro de caméra et son type de LED, puis flasher. Pour deux WS2812, utiliser le profil **Récepteur RGB**.
+4. Brancher un récepteur, sélectionner son numéro de caméra et son type de LED, puis flasher. Pour deux WS2812, utiliser le profil **Récepteur RGB** et choisir 25, 50, 75 ou 100 % de luminosité.
 5. Relier l'ATEM au routeur en Ethernet. Vérifier Programme, Preview et la reprise après une coupure réseau.
+
+Pour passer d’une version antérieure à 1.4, flasher les récepteurs avant le master.
 
 [Guide de démarrage](S2Mini/COMMENCER-ICI.md) · [Application](S2Mini/APPLICATION.md) · [Configuration et dépannage ATEM](S2Mini/README.fr.md) · [Câblage WS2812](S2Mini/LED-RGB.md)
 
