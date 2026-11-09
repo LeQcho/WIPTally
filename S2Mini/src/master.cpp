@@ -7,14 +7,20 @@
 #include <esp_wifi.h>
 #include <ATEMmin.h>
 #include "tally.h"
+#include "atem_sync_guard.h"
 
 Preferences prefs;
 WebServer web(80);
 ATEMmin atem;
 String ssid, password, atemAddress;
+uint8_t cameraInputs = tally::kInputs;
 bool demo = false, configOpen = false, hadWifi = false;
 bool radioReady = false;
 uint32_t sentAt = 0, sampledAt = 0, sequence = 0, retryAt = 0, buttonAt = 0;
+uint32_t statusAt = 0;
+AtemSyncGuard syncGuard;
+uint32_t syncRetries = 0;
+uint32_t radioQueued = 0, radioErrors = 0;
 String formToken;
 tally::Packet previous;
 const uint8_t broadcastMac[6] = {255,255,255,255,255,255};
@@ -78,6 +84,8 @@ void setup() {
   password = prefs.getString("password", "");
   atemAddress = prefs.getString("atem", "");
   demo = prefs.getBool("demo", false);
+  cameraInputs = prefs.getUChar("inputs", tally::kInputs);
+  if (cameraInputs < 1 || cameraInputs > tally::kInputs) cameraInputs = tally::kInputs;
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   Serial.printf("MASTER MAC %s\n", WiFi.macAddress().c_str());
@@ -110,12 +118,22 @@ void loop() {
       IPAddress ip;
       if (ip.fromString(atemAddress)) {
         atem.begin(ip);
-        atem.serialOutput(0x80);
-        atem.connect();
+        atem.serialOutput(1); // Connection events; avoid one ACK log per packet.
+        // runLoop() performs the first handshake. A second immediate connect()
+        // would abandon that session and can lose the initial state transfer.
+        syncGuard.reset(now);
       }
       Serial.printf("Wi-Fi OK: %s, canal %d, ATEM %s\n", WiFi.localIP().toString().c_str(), WiFi.channel(), atemAddress.c_str());
     }
     atem.runLoop(); // Library retries ATEM every 5s when no packets arrive.
+    const uint16_t inputs = atem.getTallyByIndexSources();
+    const bool ready = atem.streamHealthy() &&
+        atem.hasInitialized() && inputs > 0 && inputs <= tally::kInputs;
+    if (syncGuard.reconnectDue(now, atem.isConnected(), ready)) {
+      ++syncRetries;
+      Serial.println("ATEM synchronisation incomplete depuis 30s : nouvelle session.");
+      atem.connect();
+    }
   }
   if (!demo && !wifi && !ssid.isEmpty() && now - retryAt >= 15000) {
     retryAt = now;
@@ -138,21 +156,43 @@ void loop() {
     const uint8_t phase = (now / 2000) % 3;
     packet.flags[0] = phase == 0 ? 1 : phase == 1 ? 2 : 0;
     packet.flags[1] = phase == 0 ? 2 : phase == 1 ? 1 : 0;
-  } else if (wifi && atem.isConnected() && atem.hasInitialized()) {
+  } else if (wifi && atem.streamHealthy() && atem.hasInitialized()) {
     const uint16_t sources = atem.getTallyByIndexSources();
     packet.ready = sources > 0 && sources <= tally::kInputs;
-    if (packet.ready) for (uint8_t i = 0; i < sources; ++i)
+    if (packet.ready) for (uint8_t i = 0; i < sources && i < cameraInputs; ++i)
       packet.flags[i] = atem.getTallyByIndexTallyFlags(i) & 3;
   }
+  // The configured physical inputs limit the broadcast, never ATEM's topology.
+  for (uint8_t i = cameraInputs; i < tally::kInputs; ++i) packet.flags[i] = 0;
   const bool changed = packet.ready != previous.ready || packet.demo != previous.demo ||
       packet.channel != previous.channel || memcmp(packet.flags, previous.flags, tally::kInputs);
   if (radioReady && (changed || now - sentAt >= tally::kHeartbeatMs)) {
     packet.sequence = ++sequence;
     const auto result = esp_now_send(broadcastMac, reinterpret_cast<const uint8_t*>(&packet), sizeof(packet));
-    if (result != ESP_OK) Serial.printf("ESP-NOW erreur: %d\n", result);
+    if (result != ESP_OK) {
+      ++radioErrors;
+      Serial.printf("ESP-NOW erreur: %d\n", result);
+    } else ++radioQueued;
     if (changed) Serial.printf("ATEM pret=%u demo=%u canal=%u Cam1=%u Cam2=%u\n", packet.ready, packet.demo, packet.channel, packet.flags[0], packet.flags[1]);
     previous = packet;
     sentAt = now;
   }
   digitalWrite(15, packet.ready ? HIGH : ((now / 500) % 2));
+  if (now - statusAt >= 5000) {
+    statusAt = now;
+    Serial.printf("STATUS fw=local-app-1 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
+        wifi, WiFi.localIP().toString().c_str(), atemAddress.c_str(),
+        atem.isConnected(), atem.isRejected(), atem.hasInitialized(),
+        atem.getTallyByIndexSources(), packet.ready, packet.demo, packet.channel,
+        static_cast<unsigned long>(syncRetries), static_cast<unsigned long>(now / 1000));
+    Serial.printf("CONFIG camera_inputs=%u\n", cameraInputs);
+    const auto& d = atem.diagnostics;
+    Serial.printf("LINK rssi=%d sessions=%lu rx=%lu payloads=%lu resend=%lu gaps=%lu malformed=%lu cmd_errors=%lu socket_errors=%lu incm=%u last_id=%u age_ms=%lu espnow=%u queued=%lu tx_errors=%lu\n",
+        WiFi.RSSI(), (unsigned long)d.sessions, (unsigned long)d.received,
+        (unsigned long)d.payloads, (unsigned long)d.retransmits, (unsigned long)d.gaps,
+        (unsigned long)d.malformed, (unsigned long)d.commandErrors,
+        (unsigned long)d.socketErrors, d.inCm, atem.getATEM_lastRemotePacketId(),
+        (unsigned long)atem.lastContactAge(), radioReady,
+        (unsigned long)radioQueued, (unsigned long)radioErrors);
+  }
 }

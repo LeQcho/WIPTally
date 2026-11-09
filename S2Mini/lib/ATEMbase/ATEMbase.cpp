@@ -33,7 +33,12 @@ you can keep a clear conscience: http://skaarhoj.com/about/licenses/
 /**
  * Constructor
  */
-ATEMbase::ATEMbase(){}
+ATEMbase::ATEMbase() : _localPort(0), _serialOutput(0),
+  _localPacketIdCounter(0), _initPayloadSent(false), _initPayloadSentAtPacketId(0),
+  _hasInitialized(false), _isConnected(false), _isRejected(false), _sessionID(0),
+  _lastContact(0), _lastRemotePacketID(0), _returnPacketLength(0),
+  _cmdLength(0), _cmdPointer(0), _cBundle(false), _cBBO(0), _ATEMmodel(0),
+  neverConnected(true), waitingForIncoming(false) {}
 
 /**
  * Setting up IP address for the switcher (and local port to send packets from)
@@ -47,15 +52,11 @@ void ATEMbase::begin(const IPAddress ip, const uint16_t localPort){
 	neverConnected = true;
 	waitingForIncoming = false;
 
-		// Set up Udp communication object:
-	#if defined ESP8266 || defined ESP32
-	WiFiUDP Udp;
-	#else
-	EthernetUDP Udp;
-	#endif
+  // Close the old socket before Wi-Fi recovery; never shallow-copy WiFiUDP.
+  _Udp.stop();
+  _isConnected = _isRejected = _hasInitialized = false;
+  _resetState();
 
-	_Udp = Udp;
-	
 	_switcherIP = ip;			// Set switcher IP address
 	_localPort = localPort;		// Set default local port
 
@@ -77,6 +78,15 @@ void ATEMbase::connect() {
  * If useFixedPortNumber is true, the same port number will be used on subsequent connects, otherwise - and recommended - a new, random port number is used.
  */
 void ATEMbase::connect(const boolean useFixedPortNumber) {
+  neverConnected = false;
+  waitingForIncoming = false;
+  _gapPending = false;
+  _lastRemotePacketID = 0;
+  _lastProgress = millis();
+  _lastResendRequest = 0;
+  diagnostics.inCm = false;
+  ++diagnostics.sessions;
+  _resetState();
 	_localPacketIdCounter = 0;		// Init localPacketIDCounter to 0;
 	_initPayloadSent = false;		// Will be true after initial payload of data is delivered (regular 12-byte ping packages are transmitted.)
 	_hasInitialized = false;		// Will be true after initial payload of data is resent and received well
@@ -84,11 +94,16 @@ void ATEMbase::connect(const boolean useFixedPortNumber) {
 	_isRejected = false;			// Will be true if the connection was rejected during hello-package handshakes.
 	_sessionID = 0x53AB;			// Temporary session ID - a new will be given back from ATEM.
 	_lastContact = millis();  		// Setting this, because even though we haven't had contact, it constitutes an attempt that should be responded to at least
-	memset(_missedInitializationPackages, 0xFF, (ATEM_maxInitPackageCount+7)/8);
+	_initializationPackets.reset();
 	_initPayloadSentAtPacketId = ATEM_maxInitPackageCount;	// The max value it can be
 	uint16_t portNumber = useFixedPortNumber ? _localPort : random(50100,65300);
 
-	_Udp.begin(portNumber);		
+  _Udp.stop();
+  if (!_Udp.begin(portNumber)) {
+    ++diagnostics.socketErrors;
+    if (_serialOutput) Serial.println(F("ATEM: UDP socket open failed"));
+    return;
+  }		
 
 		
 	// Send connectString to ATEM:
@@ -116,185 +131,130 @@ void ATEMbase::connect(const boolean useFixedPortNumber) {
 void ATEMbase::runLoop() {
 	runLoop(0);
 }
+void ATEMbase::_drainPacket() {
+  while (_Udp.available()) _Udp.read(_packetBuffer, ATEM_packetBufferLength);
+}
+
+void ATEMbase::_requestMissing(uint16_t packetId) {
+  _wipeCleanPacketBuffer();
+  _createCommandHeader(ATEM_headerCmd_RequestNextAfter, 12);
+  _packetBuffer[6] = highByte(packetId);
+  _packetBuffer[7] = lowByte(packetId);
+  _packetBuffer[8] = 0x01;
+  _sendPacketBuffer(12);
+  _lastResendRequest = millis();
+}
+
 void ATEMbase::runLoop(uint16_t delayTime) {
-	if (neverConnected)	{
-		neverConnected = false;
-		connect();
-//		Serial.println("Connecting first time...");
-	}
-
-	unsigned long enterTime = millis();
-
-	do {
-		while(true) {	// Iterate until UDP buffer is empty
-			uint16_t packetSize = _Udp.parsePacket();
-			if (_Udp.available())   {  	
-				_Udp.read(_packetBuffer,12);	// Read header
-				 _sessionID = word(_packetBuffer[2], _packetBuffer[3]);
-				 uint8_t headerBitmask = _packetBuffer[0]>>3;
-				 _lastRemotePacketID = word(_packetBuffer[10],_packetBuffer[11]);
-			 	 if (_lastRemotePacketID < ATEM_maxInitPackageCount)	{
-			 	 	_missedInitializationPackages[_lastRemotePacketID>>3] &= ~(B1<<(_lastRemotePacketID&0x07));
-			 	 }
-
-				 uint16_t packetLength = word(_packetBuffer[0] & B00000111, _packetBuffer[1]);
-
-			    if (packetSize==packetLength) {  // Just to make sure these are equal, they should be!
-					_lastContact = millis();
-					waitingForIncoming = false;
-	
-					if (headerBitmask & ATEM_headerCmd_HelloPacket)	{	// Respond to "Hello" packages:
-						_isConnected = true;
-					
-						_Udp.read(_packetBuffer, 1); // Read 13th byte to get hello packet type.
-						_isRejected = _packetBuffer[0] == 3; // _packetBuffer[12]	The ATEM will return a "2" in this return package of same length. If the ATEM returns "3" it means "fully booked" (no more clients can connect) and a "4" seems to be a kind of reconnect (seen when you drop the connection and the ATEM desperately tries to figure out what happened...)
-						// _packetBuffer[15]	This number seems to increment with about 3 each time a new client tries to connect to ATEM. It may be used to judge how many client connections has been made during the up-time of the switcher?
-						
-						_wipeCleanPacketBuffer();
-						_createCommandHeader(ATEM_headerCmd_Ack, 12);
-						_packetBuffer[9] = 0x03;	// This seems to be what the client should send upon first request. 
-						_sendPacketBuffer(12);  
-					}
-
-					// If a packet is 12 bytes long it indicates that all the initial information 
-					// has been delivered from the ATEM and we can begin to answer back on every request
-					// Currently we don't know any other way to decide if an answer should be sent back...
-					// The QT lib uses the "InCm" command to indicate this, but in the latest version of the firmware (2.14)
-					// all the camera control information comes AFTER this command, so it's not a clear ending token anymore.
-					// However, I'm not sure if I checked the _lastRemotePacketID of the packages with the additional camera control info - if it was a resend, 
-					// "InCm" may still indicate the number of the last init-package and that's all I need to request the missing ones....
-			
-					// BTW: It has been observed on an old 10Mbit hub that packages could arrive in a different order than sent and this may 
-					// mess things up a bit on the initialization. So it's recommended to has as direct routes as possible.
-					if(!_initPayloadSent && packetSize == 12 && _lastRemotePacketID>1) {
-						_initPayloadSent = true;
-						_initPayloadSentAtPacketId = _lastRemotePacketID;
-						#if ATEM_debug 
-						if (_serialOutput & 0x80) {
-							Serial.print(F("_initPayloadSent=TRUE @rpID "));
-							Serial.println(_initPayloadSentAtPacketId);
-							Serial.print(F("Session ID: "));
-							Serial.println(_sessionID, DEC);
-						}
-						#endif
-					} 
-
-					if ((headerBitmask & ATEM_headerCmd_AckRequest) && !(headerBitmask & ATEM_headerCmd_Resend)) { 	// Respond to request for acknowledge	(and to resends also, whatever...  
-						_wipeCleanPacketBuffer();
-						_createCommandHeader(ATEM_headerCmd_Ack, 12, _lastRemotePacketID);
-						_sendPacketBuffer(12); 
-					
-						#if ATEM_debug 
-				        if (_serialOutput & 0x80) {
-							Serial.print(F("rpID: "));
-				        	Serial.print(_lastRemotePacketID, DEC);
-							Serial.print(F(", Head: 0x"));
-							Serial.print(headerBitmask, HEX);
-							Serial.print(F(", Len: "));
-				        	Serial.print(packetLength, DEC);
-							Serial.print(F(" bytes"));
-
-							Serial.println(F(" - ACK!"));
-						} else 
-						#endif
-						if (_serialOutput>1)	{
-							Serial.print(F("rpID: "));
-				        	Serial.print(_lastRemotePacketID, DEC);
-							Serial.println(F(" - ACK!"));
-						} 
-					} else if((headerBitmask & ATEM_headerCmd_RequestNextAfter)) {	// ATEM is requesting a previously sent package which must have dropped out of the order. We return an empty one so the ATEM doesnt' crash (which some models will, if it doesn't get an answer before another 63 commands gets sent from the controller.)
-						uint8_t b1 = _packetBuffer[6];
-						uint8_t b2 = _packetBuffer[7];
-						_wipeCleanPacketBuffer();
-						_createCommandHeader(ATEM_headerCmd_Ack, 12, 0);
-						_packetBuffer[0] = ATEM_headerCmd_AckRequest << 3;	// Overruling this. A small trick because createCommandHeader shouldn't increment local package ID counter
-						_packetBuffer[10] = b1;
-						_packetBuffer[11] = b2;
-						_sendPacketBuffer(12); 
-
-						if (_serialOutput>1)	{
-							Serial.print(F("ATEM asking to resend "));
-				        	Serial.println((b1<<8)|b2, DEC);
-						}
-					} else {
-						#if ATEM_debug 
-				        if (_serialOutput & 0x80) {
-							Serial.print(F("rpID: "));
-				        	Serial.print(_lastRemotePacketID, DEC);
-							Serial.print(F(", Head: 0x"));
-							Serial.print(headerBitmask, HEX);
-							Serial.print(F(", Len: "));
-				        	Serial.print(packetLength, DEC);
-							Serial.println(F(" bytes"));
-						} else 
-						#endif
-						if (_serialOutput>1)	{
-							Serial.print(F("rpID: "));
-				        	Serial.println(_lastRemotePacketID, DEC);
-						}
-					}
-				
-					if (!(headerBitmask & ATEM_headerCmd_HelloPacket) && packetLength>12)	{
-						_parsePacket(packetLength);
-					}
-			    } else {
-					#if ATEM_debug
-					if (_serialOutput & 0x80) 	{
-			      		Serial.print(F("ERROR: Packet size mismatch: "));
-					    Serial.print(packetSize, DEC);
-					    Serial.print(F(" != "));
-					    Serial.println(packetLength, DEC);
-					}
-					#endif
-					// Flushing:
-			        while(_Udp.available()) {
-			        	_Udp.read(_packetBuffer, ATEM_packetBufferLength);
-			        }
-			    }
-			} else break;
-		}
-
-		// After initialization, we check which packages were missed and ask for them:
-		if (!_hasInitialized && _initPayloadSent && !waitingForIncoming)	{
-			for(uint8_t i=1; i<_initPayloadSentAtPacketId; i++)	{
-				if(i <= ATEM_maxInitPackageCount) {
-					if (_missedInitializationPackages[i>>3] & (B1<<(i & 0x7)))	{
-
-						#if ATEM_debug
-						if (_serialOutput & 0x80) 	{
-				      		Serial.print(F("Asking for package "));
-						    Serial.println(i, DEC);
-						}
-						#endif
-						_wipeCleanPacketBuffer();
-						_createCommandHeader(ATEM_headerCmd_RequestNextAfter, 12);
-					    _packetBuffer[6] = highByte(i-1);  // Resend Packet ID, MSB
-					    _packetBuffer[7] = lowByte(i-1);  // Resend Packet ID, LSB
-					    _packetBuffer[8] = 0x01;
-					
-						_sendPacketBuffer(12);  
-						waitingForIncoming = true;
-						break;
-					}
-				} else {
-					break;
-				}
-			}
-			if (!waitingForIncoming)	{
-				_hasInitialized = true;
-				if (_serialOutput) {
-					Serial.println(F("ATEM _hasInitialized = TRUE"));
-				}
-			}
-		}
-	} while (delayTime>0 && !hasTimedOut(enterTime,delayTime));
-	
-
-    // If connection is gone anyway, try to reconnect:
-	if (hasTimedOut(_lastContact, 5000))	{
-      if (_serialOutput) Serial.println(F("Connection to ATEM Switcher has timed out - reconnecting!"));
+  if (neverConnected) connect();
+  const uint32_t entered = millis();
+  do {
+    // Bound work per pass, so a burst cannot starve ESP-NOW or the watchdog.
+    for (uint8_t batch = 0; batch < 32; ++batch) {
+      const int size = _Udp.parsePacket();
+      if (size <= 0) break;
+      if (_Udp.remoteIP() != _switcherIP || _Udp.remotePort() != 9910) {
+        _drainPacket();
+        continue;
+      }
+      if (size < 12 || _Udp.read(_packetBuffer, 12) != 12) {
+        ++diagnostics.malformed;
+        _drainPacket();
+        continue;
+      }
+      const uint16_t length = word(_packetBuffer[0] & 7, _packetBuffer[1]);
+      const uint8_t flags = _packetBuffer[0] >> 3;
+      const uint16_t session = word(_packetBuffer[2], _packetBuffer[3]);
+      const uint16_t id = word(_packetBuffer[10], _packetBuffer[11]);
+      if (length != size || ((flags & ATEM_headerCmd_AckRequest) && id >= ATEM_maxPacketId)) {
+        ++diagnostics.malformed;
+        _drainPacket();
+        continue;
+      }
+      ++diagnostics.received;
+      if (flags & ATEM_headerCmd_HelloPacket) {
+        if (length < 13 || _Udp.read(_packetBuffer, 1) != 1) {
+          ++diagnostics.malformed;
+          _drainPacket();
+          continue;
+        }
+        const uint8_t kind = _packetBuffer[0];
+        _drainPacket(); // ESP32 parsePacket will not advance past unread hello bytes.
+        if (kind == 3) {
+          _isRejected = true;
+          _isConnected = _hasInitialized = false;
+          _resetState();
+          if (_serialOutput) Serial.println(F("ATEM: connection rejected (client limit)"));
+          continue;
+        }
+        if (kind != 2) {
+          if (_serialOutput) Serial.println(F("ATEM: restart requested during handshake"));
+          connect();
+          break;
+        }
+        // A repeated hello must be acknowledged without rewinding a live stream.
+        if (!_isConnected) {
+          _lastRemotePacketID = id;
+          _lastProgress = millis();
+        }
+        _sessionID = session;
+        _isConnected = true;
+        _isRejected = false;
+        _lastContact = millis();
+        _wipeCleanPacketBuffer();
+        _createCommandHeader(ATEM_headerCmd_Ack, 12, id);
+        _packetBuffer[9] = 0x03;
+        _sendPacketBuffer(12);
+        continue;
+      }
+      if (!_isConnected || _isRejected) { _drainPacket(); continue; }
+      // Some ATEM generations assign their final session ID in the first data packet.
+      _sessionID = session;
+      _lastContact = millis();
+      if (flags & ATEM_headerCmd_RequestNextAfter) {
+        // This tally client sends no state-changing commands; recover instead of
+        // fabricating a retransmission for an unknown outbound command.
+        _drainPacket();
+        connect();
+        break;
+      }
+      if (!(flags & ATEM_headerCmd_AckRequest)) { _drainPacket(); continue; }
+      if (flags & ATEM_headerCmd_Resend) ++diagnostics.retransmits;
+      const uint16_t distance = (id - _lastRemotePacketID + ATEM_maxPacketId) % ATEM_maxPacketId;
+      if (distance == 1) {
+        _lastRemotePacketID = id;
+        _lastProgress = millis();
+        _gapPending = false;
+        if (length > 12) {
+          ++diagnostics.payloads;
+          _parsePacket(length);
+        } else if (id > 1) {
+          // Compatibility fallback for old mixers: all preceding IDs were
+          // accepted in order, so a heartbeat safely ends their initial dump.
+          _hasInitialized = true;
+        }
+      } else {
+        _drainPacket();
+        if (distance > 1 && distance < ATEM_maxPacketId / 2) {
+          ++diagnostics.gaps;
+          if (!_gapPending || uint32_t(millis() - _lastResendRequest) >= 50)
+            _requestMissing((_lastRemotePacketID + 1) % ATEM_maxPacketId);
+          _gapPending = true;
+        }
+        // Duplicates/older packets are re-ACKed but never applied to tally.
+      }
+      _wipeCleanPacketBuffer();
+      _createCommandHeader(ATEM_headerCmd_Ack, 12, _lastRemotePacketID);
+      _sendPacketBuffer(12);
+    }
+    if (_gapPending && uint32_t(millis() - _lastResendRequest) >= 100)
+      _requestMissing((_lastRemotePacketID + 1) % ATEM_maxPacketId);
+    if (hasTimedOut(_lastContact, 5000) ||
+        (_gapPending && hasTimedOut(_lastProgress, 5000))) {
+      if (_serialOutput) Serial.println(F("ATEM: timeout or stalled packet sequence; reconnecting"));
       connect();
-    }	
+    }
+  } while (delayTime > 0 && !hasTimedOut(entered, delayTime));
 }
 
 /**
@@ -410,39 +370,32 @@ bool ATEMbase::_readToPacketBuffer(uint8_t maxBytes) {
  * Usually such a package contains updated state information about the mixer
  * Selected information is extracted in this function and transferred to internal variables in this library.
  */
-void ATEMbase::_parsePacket(uint16_t packetLength)	{
-	
- 		// If packet is more than an ACK packet (= if its longer than 12 bytes header), lets parse it:
-      uint16_t indexPointer = 12;	// 12 bytes has already been read from the packet...
-      while (indexPointer < packetLength)  {
-
-        // Read the length of segment (first word):
-        _Udp.read(_packetBuffer, 8);
-        _cmdLength = word(_packetBuffer[0], _packetBuffer[1]);
-		_cmdPointer = 0;
-        
-			// Get the "command string", basically this is the 4 char variable name in the ATEM memory holding the various state values of the system:
-        char cmdStr[] = { 
-          _packetBuffer[4], _packetBuffer[5], _packetBuffer[6], _packetBuffer[7], '\0'};
-
-			// If length of segment larger than 8 (should always be...!)
-        if (_cmdLength>8)  {
-			_parseGetCommands(cmdStr);
-
-			while (_readToPacketBuffer())	{}	// Empty, if not done yet.
-			indexPointer+=_cmdLength;
-        } else { 
-      		indexPointer = 2000;
-         	#if ATEM_debug 
-				if (_serialOutput & 0x80) Serial.println(F("Bad CMD length, flushing..."));
-			#endif
-		  
-			// Flushing the buffer:
-	          while(_Udp.available()) {
-	              _Udp.read(_packetBuffer, ATEM_packetBufferLength);
-	          }
-        }
-      }
+void ATEMbase::_parsePacket(uint16_t packetLength) {
+  uint16_t offset = 12;
+  while (offset < packetLength) {
+    if (packetLength - offset < 8 || _Udp.read(_packetBuffer, 8) != 8) {
+      ++diagnostics.commandErrors;
+      _drainPacket();
+      return;
+    }
+    _cmdLength = word(_packetBuffer[0], _packetBuffer[1]);
+    _cmdPointer = 0;
+    if (_cmdLength < 8 || _cmdLength > packetLength - offset) {
+      ++diagnostics.commandErrors;
+      _drainPacket();
+      return;
+    }
+    char command[5];
+    memcpy(command, _packetBuffer + 4, 4);
+    command[4] = 0;
+    if (strcmp(command, "InCm") == 0) {
+      diagnostics.inCm = true;
+      _hasInitialized = true;
+    }
+    if (_cmdLength > 8) _parseGetCommands(command);
+    while (_readToPacketBuffer()) {}
+    offset += _cmdLength;
+  }
 }
 
 /**
@@ -542,13 +495,8 @@ void ATEMbase::serialOutput(uint8_t level) {
 /**
  * Timeout check
  */
-bool ATEMbase::hasTimedOut(unsigned long time, unsigned long timeout)  {
-  if ((unsigned long)(time + timeout) <= (unsigned long)millis())  {  // This should "wrap around" if time+timout is larger than the size of unsigned-longs, right?
-    return true;
-  } 
-  else {
-    return false;
-  }
+bool ATEMbase::hasTimedOut(unsigned long time, unsigned long timeout) {
+  return uint32_t(uint32_t(millis()) - uint32_t(time)) >= timeout;
 }
 
 

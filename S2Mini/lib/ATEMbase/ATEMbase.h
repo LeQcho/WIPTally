@@ -39,6 +39,7 @@ you can keep a clear conscience: http://skaarhoj.com/about/licenses/
 #endif
 
 #include <SkaarhojPgmspace.h>
+#include "ATEMInitialization.h"
 
 #define ATEM_headerCmd_AckRequest 0x1	// Please acknowledge reception of this package...
 #define ATEM_headerCmd_HelloPacket 0x2	
@@ -46,15 +47,21 @@ you can keep a clear conscience: http://skaarhoj.com/about/licenses/
 #define ATEM_headerCmd_RequestNextAfter 0x8	// I'm requesting you to resend something to me.
 #define ATEM_headerCmd_Ack 0x10		// This package is an acknowledge to package id (byte 4-5) ATEM_headerCmd_AckRequest
 
-#define ATEM_maxInitPackageCount 40		// The maximum number of initialization packages. By observation on a 2M/E 4K can be up to (not fixed!) 32. We allocate a f more then...
+#define ATEM_maxInitPackageCount 512 // Bounded tracking for larger initial state transfers.
 #define ATEM_packetBufferLength 96		// Size of packet buffer
 
 #define ATEM_debug 0				// If "1" (true), more debugging information may hit the serial monitor, in particular when _serialDebug = 0x80. Setting this to "0" is recommended for production environments since it saves on flash memory.
 
-#define ATEM_maxPacketId 1<<15	// ATEM wraps ID at bit 15, not 16
+#define ATEM_maxPacketId (1U << 15)	// Parentheses are needed when used with modulo.
 
 class ATEMbase
 {
+  public:
+    struct Diagnostics {
+      uint32_t sessions = 0, received = 0, payloads = 0, retransmits = 0;
+      uint32_t gaps = 0, malformed = 0, commandErrors = 0, socketErrors = 0;
+      bool inCm = false;
+    } diagnostics;
   protected:
   	#if defined ESP8266 || defined ESP32
   	WiFiUDP _Udp;
@@ -68,14 +75,14 @@ class ATEMbase
 	// ATEM Connection Basics
 	uint16_t _localPacketIdCounter;  	// This is our counter for the command packages we might like to send to ATEM
 	boolean _initPayloadSent;  			// If true, the initial reception of the ATEM memory has passed and we can begin to respond during the runLoop()
-	uint8_t _initPayloadSentAtPacketId;	// The Remote Package ID at which point the initialization payload was completed.
+	uint16_t _initPayloadSentAtPacketId;	// Remote packet ID; may exceed 255.
 	boolean _hasInitialized;  			// If true, all initial payload packets has been received during requests for resent - and we are completely ready to rock!
 	boolean _isConnected;				// Set true if we have received a hello package from the switcher.
 	boolean _isRejected;				// Set true if the conencteion was rejected in hello package (due to connection limit).
 	uint16_t _sessionID;				// Session id of session, given by ATEM switcher
 	unsigned long _lastContact;			// Last time (millis) the switcher sent a packet to us.
 	uint16_t _lastRemotePacketID;		// The most recent Remote Packet Id from switcher
-	uint8_t _missedInitializationPackages[(ATEM_maxInitPackageCount+7)/8];	// Used to track which initialization packages have been missed
+	ATEMInitialization<ATEM_maxInitPackageCount> _initializationPackets;
 	uint8_t _returnPacketLength;	
 	
 	// ATEM Buffer:
@@ -91,6 +98,8 @@ class ATEMbase
 
 	bool neverConnected;
 	bool waitingForIncoming;
+	uint32_t _lastProgress = 0, _lastResendRequest = 0;
+	bool _gapPending = false;
 	
   public:
     ATEMbase();
@@ -106,7 +115,9 @@ class ATEMbase
 	
 	bool isConnected();
 	bool hasInitialized();
+	bool streamHealthy() { return _isConnected && !_isRejected && !_gapPending; }
 	bool isRejected();
+	uint32_t lastContactAge() { return uint32_t(millis() - _lastContact); }
 
   	void serialOutput(uint8_t level);
 	bool hasTimedOut(unsigned long time, unsigned long timeout);
@@ -136,6 +147,9 @@ class ATEMbase
 
 	void _parsePacket(uint16_t packetLength);
 	virtual void _parseGetCommands(const char *cmdString);
+	virtual void _resetState() {}
+	void _drainPacket();
+	void _requestMissing(uint16_t packetId);
 	bool _readToPacketBuffer();
 	bool _readToPacketBuffer(uint8_t maxBytes);
 	void _prepareCommandPacket(const char *cmdString, uint8_t cmdBytes, bool indexMatch=true);

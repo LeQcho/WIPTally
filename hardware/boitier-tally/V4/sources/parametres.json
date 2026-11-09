@@ -1,0 +1,17 @@
+{
+  "width":62.0,"depth":52.0,"height":32.0,"base_height":29.0,
+  "wall":2.0,"floor":2.0,"corner":4.0,
+  "pcb_length":34.3,"pcb_width":25.4,"pcb_thickness":1.6,
+  "pcb_xmin":-29.5,"pcb_bottom":11.0,
+  "pcb_hole_spacing":20.4,"pcb_hole_end_offset_estimated":3.3,
+  "pcb_hole_diameter":2.0,"pcb_pilot_diameter":1.7,
+  "usb_overhang_assumed":2.5,"usb_width_assumed":9.0,"usb_height_assumed":3.3,
+  "usb_center_z":14.3,"usb_aperture_width":12.4,"usb_aperture_height":5.8,
+  "led_plane_y":17.0,"led_center_z":17.0,"led_package_thickness_assumed":2.5,
+  "diffuser_skin":0.4,"diffuser_front_y":27.6,
+  "diffuser_frame_width":40.0,"diffuser_frame_height":20.0,"diffuser_frame_thickness":1.6,
+  "diffuser_aperture_width":27.0,"diffuser_aperture_height":13.0,
+  "diffuser_window_width":28.6,"diffuser_window_height":14.6,
+  "diffuser_screw_half_spacing":17.5,"diffuser_screw_clearance":2.8,
+  "notes":"mm. ESP, supports LED et leur position repris de la V3 testée par l’utilisateur. Quatre vis de couvercle. Diffuseurs plats vissés, sans clips ni collerette suspendue. Recul LED conservé."
+}

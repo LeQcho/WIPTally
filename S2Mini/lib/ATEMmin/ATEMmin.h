@@ -64,7 +64,8 @@ class ATEMmin : public ATEMbase
 
 
 private:
-	void _parseGetCommands(const char *cmdStr);
+	void _parseGetCommands(const char *cmdStr) override;
+	void _resetState() override;
 
 			// Private Variables in ATEM.h:
 	

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tally Atelier</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<aside>
+  <a class="brand" href="/"><span class="mark"><i></i><i></i><i></i></span><span>Tally<span class="brand-sub">ATELIER</span></span></a>
+  <div class="nav-caption">PRÉPARER UNE CARTE</div>
+  <nav aria-label="Type de carte"><button id="nav-master" class="nav active" aria-pressed="true"><span class="nav-icon">↗</span><span>Master<small>Connexion à l’ATEM</small></span><span class="nav-num">01</span></button><button id="nav-receiver" class="nav" aria-pressed="false"><span class="nav-icon">◉</span><span>Récepteur<small>Une carte par caméra</small></span><span class="nav-num">02</span></button>
+  <button id="nav-sony" class="nav" aria-pressed="false"><span class="nav-icon">●</span><span>Tally Sony<small>Voyant d’enregistrement REC</small></span><span class="nav-num">03</span></button></nav>
+  <div class="aside-bottom"><span class="local-dot"></span>Tout reste sur cet ordinateur<small id="board-footer">Wemos LOLIN S2 Mini · ESP32-S2</small></div>
+</aside>
+<main>
+  <header><span id="mode-label">ATEM / ESP-NOW</span><div class="header-actions"><span class="local-badge">● Application locale</span><button id="quit" type="button">Quitter</button></div></header>
+  <div id="simulation" hidden>MODE SIMULATION · Aucun flash réel, aucune écriture USB.</div>
+  <section class="intro"><div class="eyebrow">CONFIGURATION & FLASH</div><h1 id="page-title">Le point de départ<br>de tes tally.</h1><p id="page-description">Prépare le master qui relie ton ATEM à toutes les caméras.</p></section>
+  <div class="workspace">
+    <form id="settings" class="card config-card">
+      <div class="card-heading"><span class="step">1</span><h2 id="form-title">Configurer le master</h2><span class="tag" id="board-tag">S2 MINI</span></div>
+      <fieldset id="master-fields"><legend class="sr-only">Réglages du master</legend>
+        <label for="ssid">Réseau Wi-Fi <span>2,4 GHz</span></label><input id="ssid" name="ssid" maxlength="32" placeholder="Nom du réseau" autocomplete="off">
+        <label for="password">Mot de passe Wi-Fi</label><div class="password-wrap"><input id="password" name="password" type="password" maxlength="63" placeholder="Mot de passe du réseau" autocomplete="off"><button id="toggle-password" type="button" aria-label="Afficher le mot de passe">Afficher</button></div><label class="open-network"><input id="open-wifi" type="checkbox"> Réseau ouvert, sans mot de passe</label><p class="hint">Le mot de passe reste disponible dans cette fenêtre pour les prochains flashes. Il n’est pas enregistré par l’application.</p>
+        <div class="field-row"><div><label for="atem">Adresse IP de l’ATEM</label><input id="atem" name="atem" placeholder="Adresse du mélangeur" inputmode="decimal"></div><div><label for="inputs">Entrées caméra utilisées</label><input id="inputs" name="inputs" type="number" min="1" max="40" value="8"></div></div>
+        <p class="hint">Choisis les entrées physiques utilisées, de 1 à 40. Le master diffusera leurs états aux récepteurs.</p>
+      </fieldset>
+      <fieldset id="receiver-fields" hidden disabled><legend class="sr-only">Réglages du récepteur</legend>
+        <label for="camera">Caméra à suivre</label><div class="camera-picker"><span>CAM</span><input id="camera" name="camera" type="number" min="1" max="40" value="1"><span class="camera-label">Entrée correspondante sur l’ATEM</span></div><div id="camera-chips" class="camera-chips" aria-label="Choisir rapidement une caméra"></div><p class="hint">Le numéro sera mémorisé dans la carte dès le premier démarrage.</p>
+        <label for="leds">Éclairage du récepteur</label><select id="leds" name="leds"><option value="receiver-rgb">Deux LED RGB WS2812 · GPIO18</option><option value="receiver">LED intégrée / sorties rouge et verte</option></select>
+        <label for="rgb-order" id="rgb-order-label">Ordre des couleurs des LED</label><select id="rgb-order"><option value="RGB">RGB · autre ordre de couleurs</option><option value="GRB">GRB · WS2812 standard</option></select><div class="color-key"><span><i class="blue"></i>Recherche</span><span><i class="green"></i>Preview</span><span><i class="red"></i>Programme</span></div>
+        <p class="hint" id="led-hint">Les deux RGB affichent le même état. Caméra au repos : éteintes. ATEM indisponible : bleu clignotant.</p>
+      </fieldset>
+      <fieldset id="sony-fields" hidden disabled><legend class="sr-only">Réglages Tally Sony</legend>
+        <div class="sony-notice"><strong>Prototype · à valider sur l’A7 IV</strong><p>Connexion directe en Bluetooth LE. Une <b>LOLIN C3 Mini</b> est nécessaire : la S2 Mini ne possède pas de Bluetooth.</p></div>
+        <label for="sony-board">Carte à flasher</label><select id="sony-board"><option value="lolin_c3_mini">LOLIN C3 Mini · ESP32-C3 · 4 Mo</option><option value="s2-incompatible">J’ai une S2 Mini · incompatible Bluetooth</option></select>
+        <label for="sony-name">Nom Bluetooth de la caméra</label><input id="sony-name" value="ILCE-7M4" maxlength="32" autocomplete="off"><p class="hint">Nom de l’A7 IV par défaut. Un boîtier Tally Sony par caméra.</p>
+        <label for="sony-mac">Adresse Bluetooth de la caméra <span>Facultatif</span></label><input id="sony-mac" placeholder="AA:BB:CC:DD:EE:FF" maxlength="17" autocomplete="off"><p class="hint">À renseigner si plusieurs Sony portent le même nom. Sinon, n’allume qu’une caméra pour le premier appairage.</p>
+        <div class="field-row"><div><label for="sony-pin">Sortie données des LED</label><select id="sony-pin"><option value="4">GPIO4</option><option value="3">GPIO3</option><option value="5">GPIO5</option><option value="6">GPIO6</option><option value="7">GPIO7</option><option value="10">GPIO10</option></select></div><div><label for="sony-pixels">Nombre de LED WS2812</label><input id="sony-pixels" type="number" min="1" max="16" value="2"></div></div>
+        <label for="sony-order">Ordre des couleurs</label><select id="sony-order"><option value="RGB">RGB · autre ordre de couleurs</option><option value="GRB">GRB · WS2812 standard</option></select>
+        <div class="color-key"><span><i class="red"></i>REC confirmé</span><span><i class="off"></i>Arrêt confirmé</span><span><i class="blue"></i>État inconnu</span></div>
+        <details class="sony-help"><summary>Appairer le Sony après le flash</summary><ol><li>Sur le Sony, active Bluetooth et la commande à distance Bluetooth.</li><li>Ouvre le menu Appairage, puis démarre le Tally Sony. Confirme la demande sur la caméra.</li><li>Lance puis arrête un REC sur la caméra : vérifie le rouge puis l’extinction.</li></ol><p>Bleu clignotant : recherche, liaison perdue ou aucun état REC reçu. Maintiens BOOT 4 secondes après démarrage pour oublier l’appairage. Un nouveau flash l’efface aussi.</p><p>Avant un tournage, teste aussi un arrêt imprévu et une reconnexion. Ce prototype indique l’état REC reçu ; il ne vérifie pas les fichiers sur la carte mémoire.</p></details>
+      </fieldset>
+      <div class="config-note"><span>↳</span><p id="config-note">Le master rejoint le Wi-Fi. Les récepteurs communiquent avec lui directement en ESP-NOW.</p></div>
+    </form>
+    <section class="card flash-card">
+      <div class="card-heading"><span class="step">2</span><h2>Brancher & flasher</h2></div>
+      <label for="port">Carte branchée en USB</label><div class="port-row"><select id="port"><option value="">Recherche des cartes…</option></select><button id="refresh" class="icon-button" aria-label="Actualiser les ports" title="Actualiser les ports">↻</button></div>
+      <p id="port-hint" class="hint">Branche une seule S2 Mini avec un câble USB de données.</p>
+      <div class="device"><div class="device-graphic"><div class="usb"></div><span id="device-board">S2<br>MINI</span><i></i></div><div><span class="device-caption">CARTE CIBLE</span><h3 id="summary-title">Master ATEM</h3><p id="summary-detail">8 entrées caméra · Wi-Fi</p></div></div>
+      <div class="summary"><div><span>Firmware</span><strong id="summary-firmware">Master</strong></div><div><span>Réglages</span><strong>Inclus dans le flash</strong></div></div>
+      <button id="flash" class="primary" type="button">Flasher le master <span>↗</span></button><button id="check" class="secondary" type="button">Vérifier la préparation sans flasher</button>
+      <p class="flash-footnote">Le flash remplace le firmware et applique les réglages choisis sur la carte sélectionnée.</p>
+    </section>
+  </div>
+  <section class="card activity-card" aria-label="Progression du flash"><div class="activity-head"><div><span id="status-dot" class="status-dot"></span><h2 id="status-title">Prêt à préparer une carte</h2></div><button id="toggle-log" aria-expanded="false">Afficher le journal ↓</button></div><p id="status-message" role="status" aria-live="polite">Renseigne les réglages, branche la carte, puis lance le flash.</p><div id="progress" class="progress" hidden><span></span></div><pre id="log" hidden aria-label="Journal de l’opération"></pre></section>
+  <details class="help"><summary>La carte n’est pas détectée ?</summary><p>Utilise un câble USB de données. Ferme les moniteurs série. Pour forcer le mode téléchargement : maintiens <b>BOOT / 0</b>, appuie puis relâche <b>RST</b>, puis relâche BOOT. Actualise ensuite les ports.</p><p>Après un flash réussi, appuie sur <b>RST sans toucher BOOT</b>. Le numéro de caméra reste mémorisé ; il peut toujours être modifié ensuite avec BOOT.</p></details>
+  <footer>Tally Atelier 1.3.0 <span id="build-info">Préparer. Brancher. Filmer.</span></footer>
+</main></body></html>

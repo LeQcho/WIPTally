@@ -1,71 +1,57 @@
-# ATEM Tally · Wemos LOLIN S2 Mini
+# WIPTally
 
-**Portage Wi-Fi master + ESP-NOW receivers : [guide français, flash et tests](S2Mini/README.fr.md).**
+Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** rejoint le Wi-Fi 2,4 GHz et transmet les états Programme et Preview aux récepteurs via ESP-NOW. **Tally Atelier** configure et flashe les cartes en USB.
 
-Les nouveaux firmwares sont dans `S2Mini/firmware`. Les dossiers Controller et Receiver ci-dessous concernent le matériel historique WT32 / ESP8266.
+![Boîtier V4 avec quatre vis au couvercle et diffuseurs plats](hardware/boitier-tally/V4/apercu_geometrie_V4.png)
 
----
+## Démarrer
 
-# Tally System for ATEM Switcher using ESP-Now
+1. Télécharger ou cloner le dépôt, puis ouvrir [le dossier S2Mini](S2Mini).
+2. Lancer **Tally Atelier.app** ou **Lancer-Tally.command** sur Mac, **Lancer-Tally.bat** sur Windows. Le premier lancement installe les dépendances Python de flash. Les quatre profils disposent d'images compilées.
+3. Brancher le master avec un câble USB de données. Saisir le réseau Wi-Fi 2,4 GHz, l'adresse IP de l'ATEM et le nombre d'entrées utilisées. Vérifier la préparation, puis flasher.
+4. Brancher un récepteur, sélectionner son numéro de caméra et son type de LED, puis flasher. Pour deux WS2812, utiliser le profil **Récepteur RGB**.
+5. Relier l'ATEM au routeur en Ethernet. Vérifier Programme, Preview et la reprise après une coupure réseau.
 
-Commercial tally systems that signal whether a camera is currently live or in preview are quite expensive. This project enables you to create such a system for a fraction of the cost.
+[Guide de démarrage](S2Mini/COMMENCER-ICI.md) · [Application](S2Mini/APPLICATION.md) · [Configuration et dépannage ATEM](S2Mini/README.fr.md) · [Câblage WS2812](S2Mini/LED-RGB.md)
 
-We use a WT32-ETH01 module as a Controller and ESP8266 Mini D1 modules as Clients. The Controller is connected via LAN and grabs the ATEM updates from the network. Updates are then sent to the client over ESP-Now which is a low-power wireless network protocol by espressif.
+```mermaid
+flowchart LR
+    ATEM["Blackmagic ATEM"] -->|Ethernet| Routeur["Routeur 2,4 GHz"]
+    Routeur -->|Wi-Fi| Master["S2 Mini · master"]
+    Master -->|ESP-NOW| R1["S2 Mini · caméra 1"]
+    Master -->|ESP-NOW| R2["S2 Mini · caméra 2…"]
+```
 
-<p align="center">
-    <img src="./assets/finished_tally.jpg" width="400" class="centered-image">
-</p>
+| État du récepteur RGB | Signal |
+| --- | --- |
+| Programme | Rouge |
+| Preview | Vert |
+| Repos | Éteint |
+| Recherche du master ou ATEM indisponible | Bleu clignotant |
 
+## Boîtier imprimable V4
 
-## Hardware
-### Bill of Materials
-| Component | Quantity | Link |
-|-----------------------|---------------------|---------------------|
-| WT32-ETH01 | 1 | [Ebay](https://www.ebay.com/sch/i.html?_nkw=WT32-ETH01); [AliExpress](https://aliexpress.com/w/wholesale-WT32%2525252dETH01.html) |
-| ESP8266 Mini D1 | 1+ | [Ebay](https://www.ebay.com/sch/i.html?_nkw=ESP8266%20Mini%20D1); [AliExpress](https://aliexpress.com/w/wholesale-ESP8266%20Mini%20D1.html) |
-| LEDs (5mm red, 3mm green and blue) | 3 per Receiver | [Ebay](https://www.ebay.com/sch/i.html?_nkw=LED%20sortiment); [AliExpress](https://de.aliexpress.com/w/wholesale-LED-sortiment.html) |
-| 10k Ohm resistor | 1 per Receiver | [Ebay](https://www.ebay.com/sch/i.html?_nkw=10k%20resistor); [AliExpress](https://aliexpress.com/w/wholesale-10k-resistor.html) |
-| Button | 1 per Receiver/Controller | [Ebay](https://www.ebay.com/sch/i.html?_nkw=momentary%20switch%206x6mm); [AliExpress](https://aliexpress.com/w/wholesale-momentary-switch-6x6mm.html) |
-| xxx mm screws | x per Receiver/Controller | [Ebay](); [AliExpress]() |
+Corps **62 × 52 × 32 mm**, couvercle à **quatre vis M2 × 8** et deux diffuseurs blancs imprimés à plat. Les diffuseurs se posent depuis l'extérieur avec deux **M2 × 5** chacun. Le cadre de 1,6 mm reçoit les vis et laisse une membrane centrale de **0,4 ou 0,6 mm**. Les supports LED de V3 peuvent être réutilisés.
 
-### 3D Printed Case
-You can find the STL files in the ``./assets/printfiles`` folder.
+| Ressource | Fichiers |
+| --- | --- |
+| Dossier complet | [Archive STEP, STL et sources V4](hardware/boitier-tally/V4/Boitier-Tally-V4-62x52x32-STEP-STL.zip) |
+| Impression | [STL par pièce et coupons](hardware/boitier-tally/V4/STL) |
+| CAO | [STEP par pièce et assemblage](hardware/boitier-tally/V4/STEP) |
+| Montage | [Guide d'impression et de montage](hardware/boitier-tally/V4/LIRE-AVANT-IMPRESSION.md) |
+| Conception | [Vues, planches et versions précédentes](hardware/boitier-tally/README.md) |
 
+La V4 a passé les contrôles numériques de géométrie. Le coupon de fixation permet d'essayer les jeux de vis et le diffuseur avant de réimprimer le socle.
 
-#### Print Settings
-| Setting | Value |
-|-----------------------|---------------------|
-| Layer Height | xxxmm |
-| Infill | xx% |
-| Supports | ? |
+## Profils et sources
 
+| Profil | Carte | Fonction |
+| --- | --- | --- |
+| Master ATEM | LOLIN S2 Mini | Wi-Fi et lecture des états tally |
+| Récepteur ATEM | LOLIN S2 Mini | LED intégrée ou sorties rouge et verte |
+| Récepteur RGB ATEM | LOLIN S2 Mini | Deux WS2812 sur GPIO18 |
+| Sony REC expérimental | LOLIN C3 Mini | Voyant REC autonome en Bluetooth LE pour Sony A7 IV |
 
-### Wiring
-All you need to do is solder the three LEDs and the button to the ESP8266 Mini D1. The GPIO of the button is pulled down using a 10k Ohm resistor. The red LED is used for the program and is placed inside a ping pong ball. Just use a drill to make a fitting hole. The green LED is used for the preview and the blue LED is a status LED.
+[Guide Sony et statut de validation](S2Mini/SONY.md) · [Sources et images de flash](S2Mini) · [Licence du portage](S2Mini/LICENSE)
 
-For the Controller you just need to solder on an LED to the WT32-ETH01 module if you want to have a status LED. The WT32-ETH01 module does not have an integrated USB to serial converter so you need to add one. You can use any USB to serial converter that has 3.3V logic levels. To enter flash mode you need to connect the GPIO0 pin to GND while powering on the module. You can then release the GPIO0 pin and upload the code. For easier flashing you can also add a button to the GPIO0 pin and GND.
-
-
-| Receiver Pinout | Controller Pinout |
-|-----------------------|---------------------|
-| ![Receiver Pinout](./assets/tally_receiver_pinout.png) | ![Controller Pinout](./assets/tally_controller_pinout.png) |
-
-| Pulldown Button to GND | Connect three LEDs| Fit into case and glue ball to case|
-|-----------------------|---------------------|---------------------|
-| ![Soldering](./assets/tally_receiver_soldering_1.jpg) | ![Soldering](./assets/tally_receiver_soldering_2.jpg) | ![Soldering](./assets/tally_receiver_glue_ball.jpg) |
-
-
-## Code
-The code is written for [platformio](https://platformio.org/). The easiest way is to use VS Code and install the platformio extension. Then you can simply open the project folder and compile and upload the code to the devices. The Receiver can be flashed by connecting the ESP8266 Mini D1 to your computer via USB. For the Controller you need to use the connected usb to serial converter as described above. Remember also to enter flash mode by connecting GPIO0 to GND while powering on the module.
-
-## Configuration
-The Controller can be connected to your network via LAN. It will automatically acquire an IP address via DHCP. You can either reach the control interface via the IP address or by using the DNS name [WT32-ETH01.local](http://WT32-ETH01.local). On the control interface, you can configure the IP addresses of the ATEM switcher. If the Controller is successfully connected to the ATEM switcher the red LED will turn off.
-
-The Receivers need to be configured with the IP address of the Controller. You can do this by pressing the button on the Client while you plug in the power cable and wait until the blue LED stops blinking. You can then release the button and connect to the Wifi of the Client. A website should open where you can change the ID of the client.
-
- The brightness of the LEDs is controlled using PWM. You can configure this in the code by changing the parameters in ``./Receiver/include/leds.h``.
-
-## Used libraries
-Many thanks to the authors of the following libraries:
-- [ESPAsyncWebServer](https://github.com/khoih-prog/WebServer_WT32_ETH01)
-- [ATEMbase, ATEMstd, SkaarhojPgmspace](https://github.com/kasperskaarhoj/SKAARHOJ-Open-Engineering/tree/master) (adjusted to work with ESP32-ETH01)
+Le portage S2 Mini s'appuie sur le projet [jkowalk/esp-now-atem-tally](https://github.com/jkowalk/esp-now-atem-tally). Les sources historiques pour WT32-ETH01 et ESP8266 et leurs modèles sont disponibles avec leur documentation d'origine. [Documentation historique](docs/ATEM-HISTORIQUE.md)

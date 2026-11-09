@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("role", choices=["master", "receiver", "list"])
+    parser.add_argument("role", choices=["master", "receiver", "receiver-rgb", "list"])
     parser.add_argument("--port", help="e.g. /dev/cu.usbmodem01 or COM5")
     parser.add_argument("--dry-run", action="store_true", help="Verify image checksums without flashing")
     args = parser.parse_args()
@@ -46,7 +46,7 @@ def main():
             parser.error("Taille de partition NVS personnelle incorrecte")
         images.insert(2, ("0x9000", "network-settings.bin"))
     command = [sys.executable, "-m", "esptool", "--chip", "esp32s2", "--port", port,
-               "--baud", "460800", "--before", "default_reset", "--after", "hard_reset",
+               "--baud", "460800", "--before", "default_reset", "--after", "no_reset",
                "write_flash", "-z", "--flash_mode", "dio", "--flash_freq", "80m", "--flash_size", "4MB"]
     for address, relative in images:
         file = ROOT / "firmware" / relative
@@ -59,7 +59,10 @@ def main():
         print("DRY RUN : images verifiees, aucune ecriture USB.")
         print(command)
         return 0
-    return subprocess.run(command, check=False).returncode
+    result = subprocess.run(command, check=False).returncode
+    if result == 0:
+        print("Ecriture verifiee. Appuie sur RST, sans toucher a BOOT, pour demarrer la carte.")
+    return result
 
 
 if __name__ == "__main__":

@@ -1,0 +1,21 @@
+{
+  "comparison": "V4 versus V3",
+  "LED_support_symmetric_difference_mm3": 0.0,
+  "ESP_mounting_region_symmetric_difference_mm3": 0.0,
+  "layout_parameters_unchanged": [
+    "width",
+    "depth",
+    "height",
+    "pcb_xmin",
+    "pcb_bottom",
+    "pcb_length",
+    "pcb_width",
+    "pcb_thickness",
+    "pcb_hole_spacing",
+    "pcb_hole_end_offset_estimated",
+    "usb_center_z",
+    "led_plane_y",
+    "led_center_z"
+  ],
+  "physical_V4_fit_validated": false
+}

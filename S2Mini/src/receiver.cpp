@@ -4,6 +4,20 @@
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include "tally.h"
+#ifdef TALLY_WS2812
+#include <Adafruit_NeoPixel.h>
+#include "rgb_status.h"
+Adafruit_NeoPixel pixels(tally::kRgbPixels, tally::kRgbDataPin, NEO_RGB + NEO_KHZ800);
+uint32_t displayedRgb = UINT32_MAX;
+void showRgb(tally::State state, uint32_t now) {
+  const auto color = tally::rgbStatus(state, now);
+  const uint32_t packed = pixels.Color(color.r, color.g, color.b);
+  if (packed == displayedRgb) return;
+  for (uint8_t i = 0; i < tally::kRgbPixels; ++i) pixels.setPixelColor(i, packed);
+  pixels.show(); // Two pixels; only refresh when the displayed color changes.
+  displayedRgb = packed;
+}
+#endif
 
 // Discrete LEDs: GPIO -> 330 ohm -> LED anode; cathode -> GND.
 constexpr uint8_t kRed = 16, kGreen = 17, kStatus = 15;
@@ -45,6 +59,16 @@ void setup() {
   prefs.begin("tally-rx", false);
   camera = prefs.getUChar("camera", 1);
   if (camera < 1 || camera > tally::kInputs) camera = 1;
+#ifdef TALLY_WS2812
+  // This rig's pixels swap red/green with GRB. Allow standard GRB modules too.
+  const bool rgbOrder = prefs.getUChar("rgb_order", 1) != 0;
+  pixels.updateType((rgbOrder ? NEO_RGB : NEO_GRB) + NEO_KHZ800);
+  pixels.begin();
+  showRgb(tally::State::Lost, millis());
+  Serial.printf("RGB WS2812: %u pixels, GPIO%u, intensite %u/255\n",
+      tally::kRgbPixels, tally::kRgbDataPin, tally::kRgbLevel);
+  Serial.printf("RGB ordre=%s fw=receiver-rgb-2\n", rgbOrder ? "RGB" : "GRB");
+#endif
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   // Country CH permits channels 1..13; receiver never associates to the router.
@@ -68,6 +92,9 @@ void loop() {
   portEXIT_CRITICAL(&mux);
   if (updated) { seen = true; channel = current.channel; }
   const auto state = tally::state(current, camera, seen, millis() - lastRx);
+#ifdef TALLY_WS2812
+  showRgb(state, now);
+#endif
   static auto previousState = tally::State::Lost;
   if (updated && state != previousState)
     Serial.printf("Cam%u %s canal=%u seq=%lu demo=%u\n", camera,

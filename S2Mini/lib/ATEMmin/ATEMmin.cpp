@@ -33,7 +33,12 @@ you can keep a clear conscience: http://skaarhoj.com/about/licenses/
 /**
  * Constructor (using arguments is deprecated! Use begin() instead)
  */
-ATEMmin::ATEMmin(){}
+ATEMmin::ATEMmin() { _resetState(); }
+
+void ATEMmin::_resetState() {
+  atemTallyByIndexSources = 0;
+  memset(atemTallyByIndexTallyFlags, 0, sizeof(atemTallyByIndexTallyFlags));
+}
 
 
 
@@ -52,6 +57,11 @@ ATEMmin::ATEMmin(){}
 		// *********************************
 
 		void ATEMmin::_parseGetCommands(const char *cmdStr)	{
+			// Validate the complete tally payload before touching the last good state.
+			if (!strcmp_P(cmdStr, PSTR("TlIn")) && _cmdLength < 10) {
+				++diagnostics.commandErrors;
+				return;
+			}
 			uint8_t mE,keyer,aUXChannel;
 			uint16_t sources;
 			long temp;
@@ -314,6 +324,10 @@ ATEMmin::ATEMmin(){}
 			if(!strcmp_P(cmdStr, PSTR("TlIn"))) {
 				
 				sources = word(_packetBuffer[0],_packetBuffer[1]);
+				if (sources>40 || _cmdLength < 10 + sources) {
+					++diagnostics.commandErrors;
+					return;
+				}
 				if (sources<=40) {
 					#if ATEM_debug
 					temp = atemTallyByIndexSources;

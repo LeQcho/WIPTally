@@ -1,0 +1,13 @@
+#!/bin/zsh
+set -e
+KIT_DIR="$(cd -- "$(dirname -- "$0")/../../.." && pwd)"
+export PATH="/opt/homebrew/bin:/usr/local/bin:/Library/Frameworks/Python.framework/Versions/Current/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+cd -- "$KIT_DIR"
+exec >> "$KIT_DIR/.tally-app.log" 2>&1
+if [[ ! -x .flash-venv/bin/python ]]; then
+  python3 -m venv .flash-venv
+fi
+if ! .flash-venv/bin/python -c 'import esptool, serial, cryptography; from importlib.metadata import version; assert version("esptool") == "4.9.0"' 2>/dev/null; then
+  .flash-venv/bin/python -m pip install -r requirements-flash.txt
+fi
+exec .flash-venv/bin/python tally_app.py

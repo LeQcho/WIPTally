@@ -1,0 +1,17 @@
+# Tally Atelier 1.3.0 — démarrer ici
+
+Double-cliquer sur **Tally Atelier.app** (Mac), **Lancer-Tally.command** (Terminal Mac) ou **Lancer-Tally.bat** (Windows). Python 3 et Internet sont nécessaires au premier lancement pour installer les dépendances de flash ; les firmwares sont déjà compilés.
+
+## Choisir le profil
+
+- **Master** : S2 Mini, connexion Wi-Fi à l’ATEM. Renseigner le réseau, son mot de passe et l’adresse ATEM.
+- **Récepteur** : S2 Mini, choisir le numéro de caméra et les LED. Liaison ESP-NOW au master.
+- **Tally Sony** : **LOLIN C3 Mini**, voyant REC autonome en Bluetooth LE pour Sony A7 IV. La S2 Mini n’a pas de Bluetooth et ne convient pas à ce profil.
+
+Renseigner les réglages, brancher une seule carte compatible, puis utiliser **Vérifier la préparation sans flasher** ou le bouton de flash. Le type de puce est vérifié avant écriture. Les profils Sony et ATEM ont des binaires distincts.
+
+Le profil Sony est un **prototype à valider sur caméra**. Voir [SONY.md](SONY.md) pour le câblage GPIO4, l’appairage et les essais REC/STOP. Il indique rouge pour REC confirmé, éteint pour arrêt confirmé, bleu clignotant pour état inconnu ou liaison perdue.
+
+Ce paquet ne contient aucune partition de réglages Wi-Fi personnels. Utiliser l’interface pour préparer les cartes. Les anciens scripts de flash ATEM restent disponibles pour les usages avancés ; sans partition personnelle, ils conservent les réglages NVS existants.
+
+[Guide de l’application](APPLICATION.md) · [Guide ATEM](README.fr.md) · [LED RGB ATEM](LED-RGB.md) · [Sony REC](SONY.md)

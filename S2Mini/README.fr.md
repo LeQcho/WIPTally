@@ -10,6 +10,12 @@ ATEM ── Ethernet ── Routeur 2,4 GHz ))) Wi-Fi ))) S2 Mini MASTER
 
 Le master est le seul ESP connecté au routeur et le seul client ATEM. Les récepteurs n'ont besoin ni du mot de passe Wi-Fi ni d'une IP. Le protocole transmet les flags tally fournis par l'ATEM (`TlIn`), ce qui permet de suivre les transitions et les compositions, plutôt que seulement les boutons Program/Preview. Le rouge a priorité si les deux flags sont actifs.
 
+[Imprimer le boîtier V4](../hardware/boitier-tally/README.md) · [Démarrer avec Tally Atelier](COMMENCER-ICI.md)
+
+## Application locale Tally Atelier
+
+Ouvrir **Tally Atelier.app** sur Mac, ou `Lancer-Tally.command` (`Lancer-Tally.bat` sur Windows). L'application permet de saisir le Wi-Fi, l'IP ATEM et le nombre de caméras du master, ou le numéro de caméra et le type de LED du récepteur, avant de flasher en USB. [Guide de l'application](APPLICATION.md).
+
 ## Flasher sur Mac
 
 Ouvrir Terminal dans ce dossier `S2Mini`, puis préparer l'outil une seule fois :
@@ -33,7 +39,7 @@ Débrancher cette carte, brancher une autre S2 Mini, puis :
 .flash-venv/bin/python flash.py receiver
 ```
 
-Appuyer sur **RST** après chaque flash si la carte reste en mode téléchargement. Les firmwares démarrent aussi sur batterie / alimentation USB sans ordinateur.
+Appuyer sur **RST**, sans maintenir BOOT, après chaque flash. Le script conserve volontairement le mode téléchargement pour éviter les erreurs de déconnexion USB lors d'un reset automatique. Les firmwares démarrent aussi sur batterie / alimentation USB sans ordinateur.
 
 Si plusieurs ports existent :
 
@@ -62,6 +68,14 @@ Le script vérifie les sommes SHA-256 et cible explicitement **esp32s2**. Il éc
 5. Reconnecter le Mac au routeur. Mettre la caméra 1 en Preview puis en Program sur l'ATEM, tester un Cut et une transition Auto, puis tester une coupure réseau et le retour de connexion.
 
 Le master suit le canal du point d'accès Wi-Fi. Les récepteurs parcourent automatiquement les canaux 1 à 13 lorsqu'ils n'entendent plus le master. Aucun réglage de canal ni appairage MAC n'est requis pour le test. Un canal fixe du routeur rend néanmoins le comportement plus prévisible. Le domaine radio du récepteur est CH (canaux 1–13), à adapter avant utilisation dans une autre région.
+
+## Deux LED RGB WS2812 5 V
+
+La variante `receiver-rgb` pilote deux WS2812 sur GPIO18 : bleu en recherche, vert en Preview, rouge en Programme. Les détails de câblage, la conversion logique 3,3 → 5 V, les états supplémentaires et la validation sont dans [LED-RGB.md](LED-RGB.md). Le choix de caméra est conservé lors du flash. Le master déjà installé est compatible.
+
+```sh
+.flash-venv/bin/python flash.py receiver-rgb
+```
 
 ## Numéro de caméra et LED
 
@@ -94,20 +108,31 @@ Utiliser les numéros GPIO sérigraphiés sur la S2 Mini. Sorties logiques 3,3 V
 
 ```sh
 python3 -m pip install platformio==6.1.18
-pio run
+pio run -e master -e receiver -e receiver-rgb -e sony-c3
 python3 package_firmware.py
 ```
 
 Ouvrir ce dossier dans PlatformIO et choisir l'environnement `master` ou `receiver` pour téléverser directement les sources. Plateforme épinglée : **espressif32 6.12.0**, Arduino ESP32 **2.0.17**, cible **lolin_s2_mini**. USB CDC natif activé.
 
-Test hôte du format radio, des limites, de la priorité Program et du timeout :
+Tests hôtes du protocole radio et de la vraie bibliothèque ATEMbase/ATEMmin avec un transport UDP simulé :
 
 ```sh
-c++ -std=c++11 -Wall -Wextra -Werror -I include test/protocol.cpp -o /tmp/tally-protocol-test
-/tmp/tally-protocol-test
+sh test/run_host_tests.sh
 ```
 
+Les tests compilent avec AddressSanitizer et UndefinedBehaviorSanitizer. Ils couvrent les paquets perdus, retransmis et désordonnés, les commandes vides (`InCm`), les tailles invalides, le retour du compteur de paquets de 32767 à 0, les reconnexions et les timeouts.
+
 Les sources du portage `S2Mini` sont sous GPL-3.0-or-later ; voir `LICENSE`. Le reste du dépôt amont conserve ses mentions d'origine.
+
+La version `fw=transport-2` corrige la double connexion initiale, consomme entièrement les réponses de handshake, respecte l'ordre des paquets et accuse aussi réception des retransmissions. Un paquet manquant est redemandé par son identifiant exact. Une séquence bloquée est relancée après 5 s ; une session connectée sans tally prêt est relancée après 30 s. Le tally est effacé à chaque nouvelle session et n'est pas annoncé prêt pendant un trou dans la séquence.
+
+`InCm` est reconnu comme marqueur de fin de transfert initial. Une commande de 8 octets sans données est valide et ne provoque plus la suppression des commandes suivantes. La fin d'initialisation par heartbeat est conservée pour les anciens mélangeurs, mais seulement après réception ordonnée des paquets précédents. Références de protocole : [documentation du mainteneur atem-connection](https://atem.julusian.dev/protocol) et [implémentation Sofie](https://github.com/Sofie-Automation/sofie-atem-connection/blob/main/src/lib/atemSocketChild.ts).
+
+Le master écrit toutes les 5 s :
+
+- `STATUS` : version du firmware, Wi-Fi, IP cible, connexion ATEM, initialisation, nombre d'entrées, état prêt.
+- `LINK` : signal Wi-Fi, nombre de sessions, paquets/payloads reçus, retransmissions, trous de séquence, paquets malformés, erreurs de commandes et de socket, marqueur `InCm`, dernier ID et âge du dernier contact.
+- `queued` indique les envois acceptés par ESP-NOW ; cela ne prouve pas leur réception par un slave. `tx_errors` compte les échecs immédiats d'envoi.
 
 - Fork de [jkowalk/esp-now-atem-tally](https://github.com/jkowalk/esp-now-atem-tally), commit `a249e27ba2c1440b566d36be04cf3faeb8ea2261`. Les dossiers historiques Controller/Receiver sont conservés pour référence ; **utiliser S2Mini pour les nouvelles cartes**. Le nouveau protocole radio n'est pas compatible avec leurs anciens firmwares.
 - Les bibliothèques ATEMbase, ATEMmin et SkaarhojPgmspace de `S2Mini/lib` viennent de [AronHetLam/ATEM_tally_light_with_ESP8266](https://github.com/AronHetLam/ATEM_tally_light_with_ESP8266), commit `9aeb2b0931d7b9a70cce16d6f3318f685799068f`, à l'origine de Kasper Skårhøj. Elles sont reprises avec leurs licences et notices.
@@ -116,7 +141,7 @@ Les sources du portage `S2Mini` sont sous GPL-3.0-or-later ; voir `LICENSE`. Le 
 
 ## Limites de cette première version
 
-Compilation des deux firmwares et tests hôtes effectués. **Pas encore de validation physique sur S2 Mini ni sur l'ATEM de l'utilisateur** : la compatibilité exacte du modèle / firmware ATEM et les performances radio restent à tester. Aucune mesure de portée ou de latence réelle n'est revendiquée.
+Compilation des deux firmwares et tests hôtes effectués. Une version précédente avait reçu les 8 entrées d’un ATEM Television Studio Pro 4K, puis présenté un blocage de synchronisation. La version `transport-2` a ensuite été flashée et vérifiée sur ce même matériel : `initialized=1`, `tally_inputs=8`, `ready=1`, et changements réels de la caméra 1 entre Preview et Program observés dans le journal USB. Des retransmissions ont été traitées sans blocage pendant cette vérification. La réception ESP-NOW sur une deuxième carte a ensuite été confirmée par son propre journal USB : `Cam1 PREVIEW` puis `Cam1 PROGRAM`, canal 4, `demo=0`. Un redémarrage supplémentaire du master a également retrouvé la synchronisation et les 8 entrées. Aucune mesure de portée ou de latence réelle n'est revendiquée.
 
 Une trame complète est envoyée sur changement d'état (échantillonnage toutes les 20 ms) et au moins toutes les 250 ms. Le broadcast ESP-NOW est non chiffré, sans accusé de réception applicatif. Le récepteur éteint ses sorties si aucune trame valide n'arrive pendant 1,8 s. Une perte de l'ATEM avec le master toujours actif est détectée par la bibliothèque ATEM, après environ 5 s sans paquet, puis signalée aux récepteurs. Ce délai est distinct du timeout ESP-NOW.
 
