@@ -2,6 +2,8 @@
 
 La V4 corrige les deux points signalés après l’impression de la V3 : les diffuseurs se cassent au montage et le couvercle se soulève avec les câbles. Le corps reste **62 × 52 × 32 mm**. Les fixations de l’ESP, les supports LED, leur recul et les volumes réservés aux fils sont repris de la V3.
 
+Pour un master souvent mis à jour, le [socle optionnel avec passage BOOT](acces-boot/README.md) donne accès au bouton avec le couvercle en place.
+
 ## Ce qu’il faut réimprimer
 
 **Le socle, le couvercle et les deux diffuseurs.** Les deux supports LED V3 peuvent être conservés. Les anciens diffuseurs ne sont pas compatibles avec cette nouvelle fixation ; les nouveaux ont deux vis chacun et se posent depuis l’extérieur.

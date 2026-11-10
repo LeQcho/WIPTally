@@ -1,0 +1,14 @@
+{
+  "physical_fit_validated": false,
+  "board_reference": "LOLIN S2 Mini V1.0.0, component face up",
+  "button_position": "estimated from the official Wemos board photograph",
+  "axis_from_usb_side_mm": 4.8,
+  "axis_above_bottom_mm": 13.5,
+  "opening_width_mm": 3.4,
+  "probe_diameter_checked_mm": 1.5,
+  "removed_volume_mm3": 121.885,
+  "step_valid": true,
+  "stl_watertight": true,
+  "four_lid_screw_pilots_preserved": true,
+  "pcb_mounts_preserved": true
+}

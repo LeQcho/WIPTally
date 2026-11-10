@@ -2,6 +2,8 @@
 
 La **V4** reprend le montage ESP et LED de la V3. Le couvercle est vissé aux quatre coins. Les diffuseurs se posent depuis l'extérieur sur les fenêtres et s'impriment à plat, sans supports.
 
+Pour le master, un [socle V4 avec accès latéral à BOOT](V4/acces-boot/README.md) permet de récupérer le port USB sans déposer le couvercle.
+
 ![Boîtier V4 assemblé](V4/rendus/assemble.png)
 
 | Pièce | Nombre | Impression |
