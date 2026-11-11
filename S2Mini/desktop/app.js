@@ -3,7 +3,7 @@ let role = 'master', token = '', running = false, starting = false, simulation =
 let closed = false;
 let portLists = {atem: [], sony: []};
 const saved = (() => {try {return JSON.parse(localStorage.getItem('tally-atelier') || '{}');} catch {return {};}})();
-const savedFields = ['ssid', 'atem', 'inputs', 'camera', 'leds', 'rgb-order', 'master-brightness', 'sony-name', 'sony-mac', 'sony-pin', 'sony-pixels', 'sony-order'];
+const savedFields = ['ssid', 'atem', 'inputs', 'camera', 'leds', 'rgb-order', 'master-brightness', 'oled-atem', 'oled-wifi', 'oled-led', 'oled-rx', 'sony-name', 'sony-mac', 'sony-pin', 'sony-pixels', 'sony-order'];
 for (const name of savedFields) if (saved[name] !== undefined) $(name).value = saved[name];
 if (!$('master-brightness').value) $('master-brightness').value = '50';
 for (let n = 1; n <= 16; n++) {
@@ -44,7 +44,7 @@ function update() {
   for (const id of ['rgb-order', 'rgb-order-label']) $(id).hidden = !rgb;
   $('receiver-fields').querySelector('.color-key').hidden = !rgb;
   $('password').disabled = $('open-wifi').checked;
-  $('led-hint').textContent = $('leds').value === 'receiver-rgb' ? 'Les deux RGB suivent la luminosité du master. Caméra au repos : éteintes. ATEM indisponible : bleu clignotant.' : 'La LED intégrée reste fixe en Programme et clignote en Preview. Sorties externes rouge GPIO16 et verte GPIO17.';
+  $('led-hint').textContent = $('leds').value === 'receiver-rgb' ? 'Les deux RGB suivent la luminosité du master. Caméra au repos : éteintes. ATEM indisponible : bleu clignotant. LED interne éteinte.' : 'Sorties externes rouge GPIO16 et verte GPIO17. LED interne éteinte.';
   $('flash').replaceChildren(document.createTextNode(simulation ? 'Simuler le flash' : sony ? 'Flasher Tally Sony' : master ? 'Flasher le master' : 'Flasher le récepteur'));
   const arrow = document.createElement('span'); arrow.textContent = '↗'; $('flash').append(arrow);
   for (const id of ['flash', 'check', 'refresh', 'nav-master', 'nav-receiver', 'nav-sony', 'port', 'quit']) $(id).disabled = running || starting || !connected;
@@ -105,7 +105,8 @@ async function start(checkOnly) {
   const sony = role === 'sony-c3';
   const body = sony ? {role, port:$('port').value, board:$('sony-board').value, sony_name:$('sony-name').value, sony_mac:$('sony-mac').value.trim(), sony_pin:$('sony-pin').value, sony_pixels:$('sony-pixels').value, rgb_order:$('sony-order').value} :
     {role: role === 'master' ? 'master' : $('leds').value, port: $('port').value,
-    ssid: $('ssid').value, password: $('open-wifi').checked ? '' : $('password').value, atem: $('atem').value, inputs: $('inputs').value, camera: $('camera').value, open_wifi:$('open-wifi').checked, rgb_order:$('rgb-order').value, brightness:$('master-brightness').value};
+    ssid: $('ssid').value, password: $('open-wifi').checked ? '' : $('password').value, atem: $('atem').value, inputs: $('inputs').value, camera: $('camera').value, open_wifi:$('open-wifi').checked, rgb_order:$('rgb-order').value, brightness:$('master-brightness').value,
+    oled_atem:$('oled-atem').value, oled_wifi:$('oled-wifi').value, oled_led:$('oled-led').value, oled_rx:$('oled-rx').value};
   starting = true; localError = false; update();
   $('status-title').textContent = 'Préparation…'; $('status-message').textContent = 'Vérification du firmware et des réglages.';
   try {

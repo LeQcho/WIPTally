@@ -100,6 +100,24 @@ class SettingsTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 validate({**MASTER, "brightness": invalid})
 
+    def test_independent_oled_durations_reach_master_nvs(self):
+        durations = {"oled_atem": 5, "oled_wifi": 10, "oled_led": 15, "oled_rx": 30}
+        with tempfile.TemporaryDirectory() as tmp:
+            config = validate({**MASTER, **durations})
+            binary = make_settings(config, Path(tmp)).read_bytes()
+            for key, seconds in durations.items():
+                self.assertEqual(stored_byte(binary, key), seconds)
+            default_binary = make_settings(validate(MASTER), Path(tmp)).read_bytes()
+            for key in durations:
+                self.assertEqual(stored_byte(default_binary, key), 5)
+        for key in durations:
+            for valid in (1, 120, "10"):
+                self.assertEqual(validate({**MASTER, key: valid})[key], int(valid))
+            for invalid in (0, 121, -1, True, None, "", 1.5, "5.0", "1; echo x"):
+                with self.subTest(key=key, invalid=invalid), self.assertRaises(ValueError):
+                    validate({**MASTER, key: invalid})
+        self.assertNotIn("oled_atem", validate({"role": "receiver-rgb", "camera": 1}))
+
     def test_restart_follows_the_same_usb_device_after_renumbering(self):
         original = SimpleNamespace(device='COM5', location='1-2:1.0')
         other = SimpleNamespace(device='COM5', vid=0x303a, pid=0x80c2, location='1-3:1.0')

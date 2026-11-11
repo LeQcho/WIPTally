@@ -9,8 +9,10 @@ constexpr uint8_t kOledSda = 33, kOledScl = 35;
 
 class OledStatus {
  public:
-  void begin(uint32_t now) {
-    pages_.begin(now);
+  void begin(uint32_t now, uint8_t atem = kDefaultOledSeconds,
+      uint8_t wifi = kDefaultOledSeconds, uint8_t led = kDefaultOledSeconds,
+      uint8_t receivers = kDefaultOledSeconds) {
+    pages_.begin(now, atem, wifi, led, receivers);
     if (!Wire.begin(kOledSda, kOledScl, 400000)) return;
     Wire.setTimeOut(5);
     for (uint8_t address : {uint8_t(0x3c), uint8_t(0x3d)}) {
@@ -83,19 +85,21 @@ class OledStatus {
     display_.setTextWrap(false);
     text(0, view.title);
     display_.drawFastHLine(0, 12, 128, SSD1306_WHITE);
-    if (view.page == 2) {
+    if (view.page >= 2) {
       text(18, view.line1, 3);
-      display_.drawRect(0, 46, 128, 7, SSD1306_WHITE);
-      display_.fillRect(2, 48, 124 * view.percent / 100, 3, SSD1306_WHITE);
+      if (view.page == 2) {
+        display_.drawRect(0, 46, 128, 7, SSD1306_WHITE);
+        display_.fillRect(2, 48, 124 * view.percent / 100, 3, SSD1306_WHITE);
+      } else text(46, view.line2);
     } else {
       text(20, view.line1);
       text(33, view.line2);
       text(46, view.detail);
     }
-    text(57, view.page == 2 ? view.detail : "TALLY MASTER");
+    text(57, view.page >= 2 ? view.detail : "TALLY MASTER");
     display_.setCursor(110, 57);
     display_.print(view.page + 1);
-    display_.print("/3");
+    display_.print("/4");
   }
 };
 }

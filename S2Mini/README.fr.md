@@ -50,14 +50,14 @@ Si plusieurs ports existent :
 
 Le script vérifie les sommes SHA-256 et cible explicitement **esp32s2**. Il écrit le bootloader à `0x1000`, les partitions à `0x8000`, `boot_app0` à `0xe000` et l'application à `0x10000`. Il conserve la zone NVS de configuration, sauf si un kit personnel fournit `firmware/network-settings.bin` : cette configuration est alors appliquée au master à `0x9000`. Le paquet public ne contient pas ce fichier. Changer de rôle n'efface donc pas les anciens réglages de ce rôle dans le paquet générique. Un flash remplace le firmware précédemment installé sur la carte.
 
-## Premier test sans ATEM ni LED externe
+## Premier test sans ATEM
 
 1. Alimenter le master et un récepteur. Le récepteur est **caméra 1** par défaut.
 2. Sur téléphone ou Mac, rejoindre le Wi-Fi **Tally-Setup-XX:XX**, mot de passe **tallysetup**. L'absence d'accès Internet est normale.
 3. Ouvrir **http://192.168.4.1**, cocher **Mode démo**, puis enregistrer. Aucun SSID / IP n'est requis en démo.
 4. Le master simule les caméras 1 et 2. Pour la caméra 1 : 2 s Program, 2 s Preview, 2 s repos, en boucle. La caméra 2 fait l'inverse pour Program et Preview.
-5. La LED intégrée du récepteur indique les états dans le tableau ci-dessous. Elle est monochrome : elle ne devient pas rouge ou verte.
-6. Couper le master : le récepteur doit quitter Program/Preview au bout de **1,8 s**, clignoter rapidement et chercher le master. Le rallumer : acquisition habituelle en quelques secondes.
+5. Vérifier les LED externes ou les messages `PROGRAM`, `PREVIEW` et `IDLE` sur le port série du récepteur à 115200 bauds. Depuis la version 1.7, sa LED interne reste éteinte.
+6. Couper le master : le récepteur doit quitter Program/Preview au bout de **1,8 s** et chercher le master ; les WS2812 indiquent la recherche en bleu. Le rallumer : acquisition habituelle en quelques secondes.
 
 ## Connexion réelle à l'ATEM
 
@@ -71,7 +71,7 @@ Le master suit le canal du point d'accès Wi-Fi. Les récepteurs parcourent auto
 
 ## ESP-NOW Long Range
 
-Le master 1.6 inclut aussi un [écran d’information OLED SSD1306 facultatif](ECRAN-OLED.md), sans modification du protocole radio 1.5. Les récepteurs en 1.5 restent compatibles.
+Le master 1.7 inclut un [écran d’information OLED SSD1306 facultatif](ECRAN-OLED.md), avec quatre durées réglables dans Atelier et un compteur de récepteurs actifs. La trame tally 1.5 reste compatible, mais il faut mettre les récepteurs en 1.7 pour leur retour de présence. Leur LED interne est désormais éteinte.
 
 Le master 1.4 configure le débit radio **Long Range à 250 kbit/s** pour les trames ESP-NOW. Sa connexion au routeur utilise les protocoles Wi-Fi habituels. Les récepteurs 1.4 acceptent les trames Long Range et standard sur le canal du master. Si le pilote refuse le débit Long Range, le master tente le débit standard et indique le résultat dans le journal série.
 
@@ -95,13 +95,15 @@ Le numéro du récepteur correspond à l'entrée caméra ATEM : **1 → entrée 
 - Pour choisir directement : ouvrir le port série à **115200 bauds**, envoyer `cam 2` suivi d'Entrée. Le numéro reste mémorisé après extinction.
 - Avec PlatformIO : `pio device monitor -b 115200`, puis saisir la commande. Fermer le moniteur avant de flasher.
 
-| État | LED rouge externe | LED verte externe | LED intégrée GPIO15 |
-|---|---|---|---|
-| Program | Allumée | Éteinte | Fixe |
-| Preview | Éteinte | Allumée | Clignote, période 500 ms |
-| Repos, liaison valide | Éteinte | Éteinte | Un bref flash toutes les 2 s |
-| Master présent, ATEM pas prêt | Éteinte | Éteinte | Deux brefs flashes |
-| Master absent / recherche | Éteinte | Éteinte | Clignote rapidement, période 200 ms |
+| État | LED rouge externe | LED verte externe |
+|---|---|---|
+| Program | Allumée | Éteinte |
+| Preview | Éteinte | Allumée |
+| Repos, liaison valide | Éteinte | Éteinte |
+| Master présent, ATEM pas prêt | Éteinte | Éteinte |
+| Master absent / recherche | Éteinte | Éteinte |
+
+La LED interne GPIO15 des récepteurs 1.7 reste éteinte dans tous ces états.
 
 Sur le **master**, la LED intégrée fixe signifie que les données tally sont prêtes ; elle clignote sinon. Le mode démo est considéré prêt.
 

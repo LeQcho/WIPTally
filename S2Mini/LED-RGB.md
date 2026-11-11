@@ -56,7 +56,7 @@ En ligne de commande :
 .flash-venv/bin/python flash.py receiver-rgb
 ```
 
-Pour choisir caméra 2 directement : ouvrir le port série à 115200 bauds et envoyer `cam 2` suivi d'Entrée. Sinon, sur une carte actuellement caméra 1, maintenir BOOT une seconde après démarrage puis relâcher. Le choix est mémorisé. Les boutons et la LED monochrome intégrée gardent leurs fonctions précédentes.
+Pour choisir caméra 2 directement : ouvrir le port série à 115200 bauds et envoyer `cam 2` suivi d'Entrée. Sinon, sur une carte actuellement caméra 1, maintenir BOOT une seconde après démarrage puis relâcher. Le choix est mémorisé. Depuis la version 1.7, la LED monochrome interne GPIO15 reste éteinte pour éviter les fuites de lumière dans le boîtier. Les deux WS2812 et les boutons gardent leur fonctionnement.
 
 ## Premier contrôle
 

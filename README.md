@@ -1,6 +1,6 @@
 # WIPTally
 
-Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** rejoint le Wi-Fi 2,4 GHz et transmet les états Programme et Preview aux récepteurs via ESP-NOW. **Tally Atelier** configure et flashe les cartes en USB. La version 1.6 conserve ESP-NOW Long Range et la luminosité commandée depuis le master, et ajoute un écran OLED facultatif au master.
+Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** rejoint le Wi-Fi 2,4 GHz et transmet les états Programme et Preview aux récepteurs via ESP-NOW. **Tally Atelier** configure et flashe les cartes en USB. La version 1.7 ajoute les durées OLED réglables et le compteur de récepteurs actifs. La LED interne des récepteurs reste éteinte.
 
 ![Boîtier V4 avec quatre vis au couvercle et diffuseurs plats](hardware/boitier-tally/V4/apercu_geometrie_V4.png)
 
@@ -14,7 +14,7 @@ Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** re
 
 Pour passer à la version 1.5, flasher les récepteurs avant le master.
 
-La version **1.6** ajoute un **OLED SSD1306 I²C 128 × 64** : IP/état ATEM, réseau/état Wi-Fi et luminosité, en trois pages de 15 secondes. Seul le master doit être mis à jour si les récepteurs sont déjà en 1.5. [Câblage et guide OLED](S2Mini/ECRAN-OLED.md).
+Le master **1.7** peut afficher quatre pages sur un **OLED SSD1306 I²C 128 × 64** : ATEM, Wi-Fi, luminosité et récepteurs actifs. Dans Atelier, chaque durée se règle de **1 à 120 secondes**, avec **5 secondes par défaut**. **Flasher le master et les récepteurs en 1.7** pour le compteur et l’extinction des LED internes. Les anciens récepteurs 1.5/1.6 continuent à recevoir les couleurs et la luminosité mais ne sont pas comptés. [Câblage et guide OLED](S2Mini/ECRAN-OLED.md).
 
 [Guide de démarrage](S2Mini/COMMENCER-ICI.md) · [Application](S2Mini/APPLICATION.md) · [Configuration et dépannage ATEM](S2Mini/README.fr.md) · [Câblage WS2812](S2Mini/LED-RGB.md) · [Bouton de luminosité du master](S2Mini/BOUTON-LUMINOSITE.md)
 
@@ -24,6 +24,8 @@ flowchart LR
     Routeur -->|Wi-Fi| Master["S2 Mini · master"]
     Master -->|ESP-NOW| R1["S2 Mini · caméra 1"]
     Master -->|ESP-NOW| R2["S2 Mini · caméra 2…"]
+    R1 -.->|Présence| Master
+    R2 -.->|Présence| Master
 ```
 
 | État du récepteur RGB | Signal |
@@ -52,7 +54,7 @@ La V4 a passé les contrôles numériques de géométrie. Le coupon de fixation 
 | Profil | Carte | Fonction |
 | --- | --- | --- |
 | Master ATEM | LOLIN S2 Mini | Wi-Fi et lecture des états tally |
-| Récepteur ATEM | LOLIN S2 Mini | LED intégrée ou sorties rouge et verte |
+| Récepteur ATEM | LOLIN S2 Mini | Sorties rouge et verte ; LED interne éteinte |
 | Récepteur RGB ATEM | LOLIN S2 Mini | Deux WS2812 sur GPIO18 |
 | Sony REC expérimental | LOLIN C3 Mini | Voyant REC autonome en Bluetooth LE pour Sony A7 IV |
 

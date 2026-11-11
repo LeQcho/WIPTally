@@ -3,7 +3,7 @@ set -eu
 cd "$(dirname "$0")/.."
 test_build=$(mktemp -d)
 trap 'rm -rf "$test_build"' EXIT
-for name in protocol initialization sync_guard brightness rgb_status sony_status; do
+for name in protocol initialization sync_guard brightness rgb_status sony_status presence; do
   c++ -std=c++17 -fsanitize=address,undefined -g -I include -I lib/ATEMbase "test/$name.cpp" -o "$test_build/$name"
   "$test_build/$name"
 done

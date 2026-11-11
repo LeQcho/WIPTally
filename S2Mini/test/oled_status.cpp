@@ -7,20 +7,35 @@
 int main() {
   using namespace tally;
   OledPages pages;
-  pages.begin(500);
+  pages.begin(500, 15, 15, 15, 15);
   assert(pages.update(500) == 0);
   assert(pages.update(15499) == 0);
   assert(pages.update(15500) == 1);
   assert(pages.update(30500) == 2);
-  assert(pages.update(45500) == 0);
-  assert(pages.update(90500) == 0); // Multiple skipped pages preserve cadence.
+  assert(pages.update(45500) == 3);
+  assert(pages.update(60500) == 0);
+  assert(pages.update(240500) == 0); // Multiple skipped cycles preserve cadence.
+  pages.begin(0, 5, 10, 15, 1);
+  assert(pages.update(4999) == 0);
+  assert(pages.update(5000) == 1);
+  assert(pages.update(14999) == 1);
+  assert(pages.update(15000) == 2);
+  assert(pages.update(30000) == 3);
+  assert(pages.update(30999) == 3);
+  assert(pages.update(31000) == 0);
+  assert(pages.update(31000 * 123 + 15000) == 2);
+  assert(oledSeconds(0) == 5 && oledSeconds(121) == 5);
+  assert(oledSeconds(1) == 1 && oledSeconds(120) == 120);
+  pages.begin(0, 0, 121, 5, 5);
+  assert(pages.update(5000) == 1); // Invalid stored durations use the default.
   const uint32_t start = std::numeric_limits<uint32_t>::max() - 4000;
-  pages.begin(start);
+  pages.begin(start, 15, 15, 15, 15);
   assert(pages.update(start + 14999) == 0);
   assert(pages.update(start + 15000) == 1);
-  assert(pages.update(start + 45000) == 0);
+  assert(pages.update(start + 45000) == 3);
+  assert(pages.update(start + 60000) == 0);
 
-  OledInfo info{false, false, false, 130, "192.0.2.196", "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456"};
+  OledInfo info{false, false, false, 130, "192.0.2.196", "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456", 0, false};
   auto view = oledView(0, info);
   assert(!strcmp(view.line1, "192.0.2.196"));
   assert(!strcmp(view.line2, "DECONNECTE"));
@@ -35,6 +50,12 @@ int main() {
     info.brightness = level;
     assert(oledView(2, info).percent == brightnessPercent(level));
   }
+  assert(!strcmp(oledView(3, info).line1, "--"));
+  info.presenceReady = true;
+  assert(!strcmp(oledView(3, info).line1, "0"));
+  info.receivers = 2;
+  assert(!strcmp(oledView(3, info).line1, "2"));
+  assert(!strcmp(oledView(3, info).line2, "ACTIFS"));
   char text[40];
   oledText("R\xc3\xa9gie \xf0\x9f\x8e\xa5", text, sizeof(text));
   assert(!strcmp(text, "Regie ?"));

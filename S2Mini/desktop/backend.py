@@ -17,6 +17,7 @@ from .usb_flash import AFTER_WRITE, restart_message, run_write, write_verified
 ROOT = Path(__file__).resolve().parents[1]
 ROLES = {"master", "receiver", "receiver-rgb", "sony-c3"}
 RGB_LEVELS = {"25": 64, "50": 130, "75": 191, "100": 255}
+OLED_PAGES = {"oled_atem": "ATEM", "oled_wifi": "Wi-Fi", "oled_led": "Luminosité", "oled_rx": "Récepteurs"}
 
 
 def chip_for(role):
@@ -75,6 +76,11 @@ def validate(data):
         if level is None:
             raise ValueError("Choisir une luminosité de départ de 25, 50, 75 ou 100 %.")
         result["rgb_level"] = level
+        for key, label in OLED_PAGES.items():
+            value = data.get(key, 5)
+            if isinstance(value, bool) or not str(value).isascii() or not str(value).isdigit() or not 1 <= int(value) <= 120:
+                raise ValueError(f"Durée OLED {label} : saisir un nombre entier de 1 à 120 secondes.")
+            result[key] = int(value)
     else:
         result["camera"] = integer(data.get("camera", 1), "Numéro de caméra")
         result["rgb_order"] = data.get("rgb_order", "RGB")
@@ -104,6 +110,7 @@ def settings_rows(config):
                 ("atem", "data", "string", config["atem"]),
                 ("inputs", "data", "u8", config["inputs"]),
                 ("rgb_level", "data", "u8", config["rgb_level"]),
+                *[(key, "data", "u8", config[key]) for key in OLED_PAGES],
                 ("demo", "data", "u8", 0)]
     rows = [("tally-rx", "namespace", "", ""), ("camera", "data", "u8", config["camera"])]
     if config["role"] == "receiver-rgb":

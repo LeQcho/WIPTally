@@ -10,6 +10,9 @@
 #include "atem_sync_guard.h"
 #include "espnow_radio.h"
 #include "oled_status.h"
+#include "presence.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 
 Preferences prefs;
 WebServer web(80);
@@ -20,6 +23,10 @@ constexpr uint8_t kBrightnessButtonPin = 7;
 uint8_t brightness = tally::kDefaultBrightness;
 tally::BrightnessButton brightnessButton;
 tally::OledStatus oled;
+tally::ReceiverPresence receivers;
+struct ReceiverEvent { uint8_t mac[6]; uint8_t camera; uint32_t at; };
+QueueHandle_t receiverReports = nullptr;
+bool presenceReady = false;
 bool demo = false, configOpen = false, hadWifi = false;
 bool radioReady = false;
 bool longRangeEnabled = false;
@@ -31,6 +38,17 @@ uint32_t radioQueued = 0, radioErrors = 0;
 String formToken;
 tally::Packet previous;
 const uint8_t broadcastMac[6] = {255,255,255,255,255,255};
+
+void onReceiverReport(const uint8_t* mac, const uint8_t* bytes, int size) {
+  tally::ReceiverReport report;
+  if (!receiverReports || !mac || size < 0 || !tally::decodeReport(bytes, size, report)) return;
+  ReceiverEvent event = {};
+  memcpy(event.mac, mac, 6);
+  event.camera = report.camera;
+  event.at = millis();
+  // Wi-Fi callback: only validate/copy. Track receivers from loop().
+  xQueueSend(receiverReports, &event, 0);
+}
 
 void configureTallyRate() {
   if (!radioReady || !longRangeEnabled) return;
@@ -110,7 +128,12 @@ void setup() {
   demo = prefs.getBool("demo", false);
   cameraInputs = prefs.getUChar("inputs", tally::kInputs);
   if (cameraInputs < 1 || cameraInputs > tally::kInputs) cameraInputs = tally::kInputs;
-  oled.begin(millis());
+  const uint8_t oledAtem = tally::oledSeconds(prefs.getUChar("oled_atem", tally::kDefaultOledSeconds));
+  const uint8_t oledWifi = tally::oledSeconds(prefs.getUChar("oled_wifi", tally::kDefaultOledSeconds));
+  const uint8_t oledLed = tally::oledSeconds(prefs.getUChar("oled_led", tally::kDefaultOledSeconds));
+  const uint8_t oledRx = tally::oledSeconds(prefs.getUChar("oled_rx", tally::kDefaultOledSeconds));
+  oled.begin(millis(), oledAtem, oledWifi, oledLed, oledRx);
+  Serial.printf("OLED durees_s ATEM=%u WiFi=%u LED=%u recepteurs=%u\n", oledAtem, oledWifi, oledLed, oledRx);
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   const auto protocol = tally::enableLongRange();
@@ -129,12 +152,21 @@ void setup() {
   peer.ifidx = WIFI_IF_STA;
   radioReady = radioReady && esp_now_add_peer(&peer) == ESP_OK;
   if (!radioReady) Serial.println("ERREUR initialisation ESP-NOW");
+  if (radioReady) {
+    receiverReports = xQueueCreate(16, sizeof(ReceiverEvent));
+    presenceReady = receiverReports && esp_now_register_recv_cb(onReceiverReport) == ESP_OK;
+    if (!presenceReady) Serial.println("ERREUR compteur de recepteurs; diffusion tally maintenue");
+  }
   configureTallyRate();
   setupWeb();
 }
 
 void loop() {
   const uint32_t now = millis();
+  ReceiverEvent event;
+  for (uint8_t i = 0; presenceReady && i < 8 && xQueueReceive(receiverReports, &event, 0) == pdTRUE; ++i)
+    receivers.record(event.mac, event.camera, event.at);
+  const uint8_t activeReceivers = receivers.count(millis());
   if (brightnessButton.update(digitalRead(kBrightnessButtonPin) == LOW, now)) {
     brightness = tally::nextBrightness(brightness);
     prefs.putUChar("rgb_level", brightness);
@@ -179,7 +211,7 @@ void loop() {
   const auto sourcesForDisplay = atem.getTallyByIndexSources();
   const bool displayReady = wifi && atem.streamHealthy() && atem.hasInitialized() &&
       sourcesForDisplay > 0 && sourcesForDisplay <= tally::kInputs;
-  oled.tick(millis(), {wifi, displayReady, demo, brightness, atemAddress.c_str(), ssid.c_str()});
+  oled.tick(millis(), {wifi, displayReady, demo, brightness, atemAddress.c_str(), ssid.c_str(), activeReceivers, presenceReady});
   if (now - sampledAt < 20) { delay(1); return; }
   sampledAt = now;
   tally::Packet packet;
@@ -220,13 +252,14 @@ void loop() {
   digitalWrite(15, packet.ready ? HIGH : ((now / 500) % 2));
   if (now - statusAt >= 5000) {
     statusAt = now;
-    Serial.printf("STATUS fw=master-1.6.0 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
+    Serial.printf("STATUS fw=master-1.7.0 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
         wifi, WiFi.localIP().toString().c_str(), atemAddress.c_str(),
         atem.isConnected(), atem.isRejected(), atem.hasInitialized(),
         atem.getTallyByIndexSources(), packet.ready, packet.demo, packet.channel,
         static_cast<unsigned long>(syncRetries), static_cast<unsigned long>(now / 1000));
     Serial.printf("CONFIG camera_inputs=%u luminosite=%u%% rgb_level=%u\n",
         cameraInputs, tally::brightnessPercent(brightness), brightness);
+    Serial.printf("RECEPTEURS actifs=%u compteur=%u expiration_ms=%lu\n", activeReceivers, presenceReady, (unsigned long)tally::kPresenceExpiryMs);
     const auto& d = atem.diagnostics;
     Serial.printf("LINK rssi=%d sessions=%lu rx=%lu payloads=%lu resend=%lu gaps=%lu malformed=%lu cmd_errors=%lu socket_errors=%lu incm=%u last_id=%u age_ms=%lu espnow=%u queued=%lu tx_errors=%lu\n",
         WiFi.RSSI(), (unsigned long)d.sessions, (unsigned long)d.received,

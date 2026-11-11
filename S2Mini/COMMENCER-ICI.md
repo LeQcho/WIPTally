@@ -1,4 +1,4 @@
-# Tally Atelier 1.6.0 — démarrer ici
+# Tally Atelier 1.7.0 — démarrer ici
 
 Double-cliquer sur **Tally Atelier.app** (Mac), **Lancer-Tally.command** (Terminal Mac) ou **Lancer-Tally.bat** (Windows). Python 3 et Internet sont nécessaires au premier lancement pour installer les dépendances de flash ; les firmwares sont déjà compilés.
 
@@ -18,4 +18,4 @@ Ce paquet ne contient aucune partition de réglages Wi-Fi personnels. Utiliser l
 
 Le [bouton de luminosité du master](BOUTON-LUMINOSITE.md) fait passer tous les récepteurs WS2812 entre 25, 50, 75 et 100 %. Pour la mise à jour 1.5, flasher les récepteurs avant le master.
 
-La version **1.6** permet d’ajouter un [OLED SSD1306 au master](ECRAN-OLED.md), sans configuration supplémentaire. Il affiche trois pages de 15 secondes : ATEM, Wi-Fi et luminosité. Mettre à jour uniquement le master si les récepteurs sont déjà en 1.5.
+La version **1.7** affiche quatre pages sur l’[OLED SSD1306 du master](ECRAN-OLED.md) : ATEM, Wi-Fi, luminosité et récepteurs actifs. Choisir dans le profil Master une durée de **1 à 120 secondes par page** (5 s par défaut). Flasher aussi chaque récepteur en 1.7 pour le retour de présence et l’extinction de sa LED interne. Les LED externes gardent leurs couleurs et leur réglage de luminosité.

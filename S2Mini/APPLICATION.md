@@ -14,7 +14,7 @@ Si macOS bloque le lancement d'une application locale non signée, le lanceur `.
 
 ## Préparer un master
 
-Depuis la version 1.6, le profil Master inclut l’[écran OLED SSD1306 facultatif](ECRAN-OLED.md). Il est détecté automatiquement au démarrage ; aucun champ à renseigner pour l’écran.
+Le profil Master inclut l’[écran OLED SSD1306 facultatif](ECRAN-OLED.md), détecté automatiquement au démarrage. Depuis la version 1.7, choisir séparément la durée des pages **ATEM**, **Wi-Fi**, **Luminosité** et **Récepteurs**, de **1 à 120 secondes**. Les quatre champs proposent 5 secondes et sont mémorisés dans le formulaire puis écrits dans le master lors du flash. Changer le formulaire sans reflasher ne modifie pas le master déjà en service.
 
 1. Choisir **Master**.
 2. Choisir la **luminosité de départ** des récepteurs et saisir le SSID **2,4 GHz**, le mot de passe Wi-Fi, l'adresse IPv4 de l'ATEM et le **nombre d'entrées caméra utilisées**, entre 1 et 40. Le mot de passe est requis, sauf si la case « Réseau ouvert, sans mot de passe » est explicitement cochée.
@@ -29,13 +29,15 @@ Les anciennes cartes sans valeur `inputs` mémorisée conservent la limite histo
 
 1. Choisir **Récepteur**.
 2. Choisir sa **caméra de 1 à 40**, avec les boutons rapides ou le champ numérique.
-3. Choisir **Deux LED RGB WS2812** ou **LED intégrée / sorties rouge et verte**. Pour les WS2812, choisir l’ordre des couleurs RGB ou GRB. Les récepteurs suivent le niveau transmis par le master.
+3. Choisir **Deux LED RGB WS2812** ou **LED classiques rouge et verte · GPIO16/17**. Pour les WS2812, choisir l’ordre des couleurs RGB ou GRB. Les récepteurs suivent le niveau transmis par le master. La LED interne GPIO15 reste éteinte sur les deux profils.
 4. Brancher la carte concernée, vérifier le port et cliquer **Flasher le récepteur**.
 5. Attendre le redémarrage automatique après la vérification du flash.
 
 La carte démarre avec le numéro exact choisi, mémorisé sous `tally-rx/camera`. Aucun mot de passe Wi-Fi n'est écrit sur un récepteur. La luminosité de départ se règle dans le profil Master. Son bouton sur GPIO7 permet ensuite de passer entre 25, 50, 75 et 100 %. [Guide du bouton](BOUTON-LUMINOSITE.md). Les boutons BOOT et la commande série `cam N` restent disponibles pour changer de caméra plus tard. Pour les WS2812, suivre [le guide de câblage](LED-RGB.md).
 
 ## Vérifier et lire le résultat
+
+Le compteur OLED du master 1.7 reçoit des retours des récepteurs 1.7 : flasher également les récepteurs pour les compter. Les anciens récepteurs 1.5/1.6 conservent leur tally, mais n’envoient pas de présence. Le compteur identifie les cartes par leur MAC, y compris plusieurs cartes sur une même caméra. Une carte disparaît du compteur après 8 secondes sans retour valide.
 
 **Vérifier la préparation sans flasher** contrôle les champs, les sommes SHA-256 des images et la génération de la configuration. Cette action fonctionne même sans carte connectée et n'écrit rien sur l'USB.
 
