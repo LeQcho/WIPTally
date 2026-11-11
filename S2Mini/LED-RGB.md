@@ -10,7 +10,7 @@ Le firmware `receiver-rgb` commande deux pixels RGB WS2812/NeoPixel en chaîne �
 | Master reçu, ATEM pas prêt | Bleu clignotant, période 1 s |
 | Caméra ni en Preview ni en Programme | Éteintes |
 
-Programme reste prioritaire si les deux flags sont actifs. Une perte du master fait revenir au bleu au bout de 1,8 s. La détection d'une coupure ATEM par le master prend environ 5 s sans réponse. Dans Tally Atelier, choisir 25, 50, 75 ou 100 % dans le profil **Récepteur RGB**. Cela correspond aux valeurs 64, 130, 191 et 255 par canal. La valeur par défaut est 130 sur 255. Les deux pixels utilisent le niveau enregistré lors du flash.
+Programme reste prioritaire si les deux flags sont actifs. Une perte du master fait revenir au bleu au bout de 1,8 s. La détection d'une coupure ATEM par le master prend environ 5 s sans réponse. Dans Tally Atelier, choisir la luminosité de départ dans le profil **Master**. Son bouton sur GPIO7 permet ensuite de passer entre 25, 50, 75 et 100 %, soit 64, 130, 191 et 255 par canal. Le master transmet ce niveau aux récepteurs et le mémorise. [Câblage du bouton et mise à jour](BOUTON-LUMINOSITE.md).
 
 ## Matériel
 

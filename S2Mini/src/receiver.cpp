@@ -71,7 +71,7 @@ void setup() {
   showRgb(tally::State::Lost, millis());
   Serial.printf("RGB WS2812: %u pixels, GPIO%u, intensite %u/255\n",
       tally::kRgbPixels, tally::kRgbDataPin, rgbLevel);
-  Serial.printf("RGB ordre=%s fw=receiver-rgb-3\n", rgbOrder ? "RGB" : "GRB");
+  Serial.printf("RGB ordre=%s fw=receiver-rgb-4\n", rgbOrder ? "RGB" : "GRB");
 #endif
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
@@ -97,7 +97,13 @@ void loop() {
   if (pending) { current = inbox; pending = false; }
   lastRx = receivedAt;
   portEXIT_CRITICAL(&mux);
-  if (updated) { seen = true; channel = current.channel; }
+  if (updated) {
+    seen = true;
+    channel = current.channel;
+#ifdef TALLY_WS2812
+    if (current.brightness != 0) rgbLevel = current.brightness;
+#endif
+  }
   const auto state = tally::state(current, camera, seen, millis() - lastRx);
 #ifdef TALLY_WS2812
   showRgb(state, now);

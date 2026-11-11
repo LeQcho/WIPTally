@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdio>
 #include <limits>
+#include <initializer_list>
 
 int main() {
   using namespace tally;
@@ -24,10 +25,26 @@ int main() {
   p.ready = 0;
   assert(state(p, 1, true, 0) == State::Offline);
   p.channel = 14; assert(!decode(bytes, sizeof(p), out)); p.channel = 1;
-  p.version = 2; assert(!decode(bytes, sizeof(p), out)); p.version = 1;
+  p.version = 3; assert(!decode(bytes, sizeof(p), out)); p.version = 2;
   p.magic = 0; assert(!decode(bytes, sizeof(p), out)); p.magic = kMagic;
   p.group = 2; assert(!decode(bytes, sizeof(p), out)); p.group = kGroup;
   p.flags[19] = 4; assert(!decode(bytes, sizeof(p), out)); p.flags[19] = 0;
+  for (uint8_t level : {64, 130, 191, 255}) {
+    p.brightness = level;
+    assert(decode(bytes, sizeof(p), out));
+    assert(out.brightness == level);
+  }
+  p.brightness = 60; assert(!decode(bytes, sizeof(p), out));
+  p.brightness = 0; assert(!decode(bytes, sizeof(p), out));
+  p.brightness = kDefaultBrightness;
+  assert(!decode(nullptr, sizeof(p), out));
+  // New receivers accept the exact old 54-byte format without a brightness override.
+  p.version = 1;
+  assert(decode(bytes, kLegacyPacketSize, out));
+  assert(out.brightness == 0 && out.version == 1);
+  assert(!decode(bytes, sizeof(p), out));
+  p.version = 2;
+  assert(!decode(bytes, kLegacyPacketSize, out));
   // Unsigned elapsed time must survive the 49-day millis rollover.
   uint32_t before = std::numeric_limits<uint32_t>::max() - 100;
   uint32_t after = 200;

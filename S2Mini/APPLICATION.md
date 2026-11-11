@@ -15,7 +15,7 @@ Si macOS bloque le lancement d'une application locale non signée, le lanceur `.
 ## Préparer un master
 
 1. Choisir **Master**.
-2. Saisir le SSID **2,4 GHz**, le mot de passe Wi-Fi, l'adresse IPv4 de l'ATEM et le **nombre d'entrées caméra utilisées**, entre 1 et 40. Le mot de passe est requis, sauf si la case « Réseau ouvert, sans mot de passe » est explicitement cochée.
+2. Choisir la **luminosité de départ** des récepteurs et saisir le SSID **2,4 GHz**, le mot de passe Wi-Fi, l'adresse IPv4 de l'ATEM et le **nombre d'entrées caméra utilisées**, entre 1 et 40. Le mot de passe est requis, sauf si la case « Réseau ouvert, sans mot de passe » est explicitement cochée.
 3. Brancher la S2 Mini destinée à devenir master et sélectionner son port USB.
 4. Cliquer **Flasher le master**. Attendre la vérification et le redémarrage automatique. Si le port USB de la S2 Mini ne revient pas, couper puis rétablir son alimentation USB.
 
@@ -27,11 +27,11 @@ Les anciennes cartes sans valeur `inputs` mémorisée conservent la limite histo
 
 1. Choisir **Récepteur**.
 2. Choisir sa **caméra de 1 à 40**, avec les boutons rapides ou le champ numérique.
-3. Choisir **Deux LED RGB WS2812** ou **LED intégrée / sorties rouge et verte**. Pour les WS2812, choisir l’ordre des couleurs RGB ou GRB et la luminosité. Les choix 25, 50, 75 et 100 % correspondent à 64, 130, 191 et 255 sur 255. Le réglage par défaut est 50 %.
+3. Choisir **Deux LED RGB WS2812** ou **LED intégrée / sorties rouge et verte**. Pour les WS2812, choisir l’ordre des couleurs RGB ou GRB. Les récepteurs suivent le niveau transmis par le master.
 4. Brancher la carte concernée, vérifier le port et cliquer **Flasher le récepteur**.
 5. Attendre le redémarrage automatique après la vérification du flash.
 
-La carte démarre avec le numéro exact choisi, mémorisé sous `tally-rx/camera`. Aucun mot de passe Wi-Fi n'est écrit sur un récepteur. L’intensité est écrite dans les réglages du récepteur au moment du flash. Les boutons BOOT et la commande série `cam N` restent disponibles pour changer de caméra plus tard. Pour les WS2812, suivre [le guide de câblage](LED-RGB.md).
+La carte démarre avec le numéro exact choisi, mémorisé sous `tally-rx/camera`. Aucun mot de passe Wi-Fi n'est écrit sur un récepteur. La luminosité de départ se règle dans le profil Master. Son bouton sur GPIO7 permet ensuite de passer entre 25, 50, 75 et 100 %. [Guide du bouton](BOUTON-LUMINOSITE.md). Les boutons BOOT et la commande série `cam N` restent disponibles pour changer de caméra plus tard. Pour les WS2812, suivre [le guide de câblage](LED-RGB.md).
 
 ## Vérifier et lire le résultat
 

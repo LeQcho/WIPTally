@@ -58,6 +58,7 @@ class SettingsTests(unittest.TestCase):
             self.assertNotIn(b"mot-de-passe", binary)
             binary = make_settings(validate(MASTER), Path(tmp)).read_bytes()
             self.assertEqual(stored_byte(binary, "inputs"), 8)
+            self.assertEqual(stored_byte(binary, "rgb_level"), 130)
             self.assertEqual(stored_byte(binary, "demo"), 0)
             self.assertIn("Réseau, test".encode()+b'\0', binary)
             self.assertIn(b"mot-de-passe\0", binary)
@@ -86,6 +87,18 @@ class SettingsTests(unittest.TestCase):
                 validate({"role": "receiver-rgb", "rgb_brightness": invalid})
         classic = validate({"role": "receiver", "rgb_brightness": "100"})
         self.assertNotIn("rgb_level", classic)
+
+    def test_master_brightness_is_written_to_the_master_namespace(self):
+        for percentage, level in (("25", 64), ("50", 130), ("75", 191), ("100", 255)):
+            with self.subTest(percentage=percentage), tempfile.TemporaryDirectory() as tmp:
+                config = validate({**MASTER, "brightness": percentage})
+                rows = settings_rows(config)
+                self.assertEqual(rows[0], ("tally-master", "namespace", "", ""))
+                self.assertIn(("rgb_level", "data", "u8", level), rows)
+                self.assertEqual(stored_byte(make_settings(config, Path(tmp)).read_bytes(), "rgb_level"), level)
+        for invalid in (0, 60, 101, True, None):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                validate({**MASTER, "brightness": invalid})
 
     def test_restart_follows_the_same_usb_device_after_renumbering(self):
         original = SimpleNamespace(device='COM5', location='1-2:1.0')

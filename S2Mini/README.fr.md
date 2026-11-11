@@ -79,7 +79,7 @@ Pour passer d’une version antérieure à 1.4, flasher **les récepteurs d’ab
 
 ## Deux LED RGB WS2812 5 V
 
-La variante `receiver-rgb` pilote deux WS2812 sur GPIO18 : bleu en recherche, vert en Preview, rouge en Programme. Les détails de câblage, la conversion logique 3,3 → 5 V, les états supplémentaires et la validation sont dans [LED-RGB.md](LED-RGB.md). Tally Atelier permet de choisir la caméra, l’ordre des couleurs et la luminosité avant le flash.
+La variante `receiver-rgb` pilote deux WS2812 sur GPIO18 : bleu en recherche, vert en Preview, rouge en Programme. Les détails de câblage, la conversion logique 3,3 → 5 V, les états supplémentaires et la validation sont dans [LED-RGB.md](LED-RGB.md). Tally Atelier permet de choisir la caméra et l’ordre des couleurs du récepteur. La luminosité est transmise par le master, avec un bouton de réglage sur GPIO7. [Guide de luminosité](BOUTON-LUMINOSITE.md).
 
 ```sh
 .flash-venv/bin/python flash.py receiver-rgb

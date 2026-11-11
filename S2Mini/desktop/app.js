@@ -3,9 +3,9 @@ let role = 'master', token = '', running = false, starting = false, simulation =
 let closed = false;
 let portLists = {atem: [], sony: []};
 const saved = (() => {try {return JSON.parse(localStorage.getItem('tally-atelier') || '{}');} catch {return {};}})();
-const savedFields = ['ssid', 'atem', 'inputs', 'camera', 'leds', 'rgb-order', 'rgb-brightness', 'sony-name', 'sony-mac', 'sony-pin', 'sony-pixels', 'sony-order'];
+const savedFields = ['ssid', 'atem', 'inputs', 'camera', 'leds', 'rgb-order', 'master-brightness', 'sony-name', 'sony-mac', 'sony-pin', 'sony-pixels', 'sony-order'];
 for (const name of savedFields) if (saved[name] !== undefined) $(name).value = saved[name];
-if (!$('rgb-brightness').value) $('rgb-brightness').value = '50';
+if (!$('master-brightness').value) $('master-brightness').value = '50';
 for (let n = 1; n <= 16; n++) {
   const button = document.createElement('button'); button.type = 'button'; button.textContent = n;
   button.addEventListener('click', () => { $('camera').value = n; update(); });
@@ -28,7 +28,7 @@ function update() {
   $('page-description').textContent = master ? 'Prépare le master qui relie ton ATEM à toutes les caméras.' : 'Choisis sa caméra, son éclairage, et mémorise le tout en un flash.';
   $('form-title').textContent = master ? 'Configurer le master' : 'Configurer le récepteur';
   $('summary-title').textContent = master ? 'Master ATEM' : `Caméra ${$('camera').value || '—'}`;
-  $('summary-detail').textContent = master ? `${$('inputs').value || '—'} entrées caméra · Wi-Fi` : ($('leds').value === 'receiver-rgb' ? `2 LED WS2812 · ${$('rgb-brightness').value} %` : 'LED classique · ESP-NOW');
+  $('summary-detail').textContent = master ? `${$('inputs').value || '—'} entrées caméra · Wi-Fi` : ($('leds').value === 'receiver-rgb' ? '2 LED WS2812 · luminosité du master' : 'LED classique · ESP-NOW');
   $('summary-firmware').textContent = master ? 'Master' : $('leds').value === 'receiver-rgb' ? 'Récepteur RGB' : 'Récepteur classique';
   $('config-note').textContent = master ? 'Le master rejoint le Wi-Fi. Les récepteurs communiquent avec lui directement en ESP-NOW.' : 'Aucun mot de passe Wi-Fi sur le récepteur. Il retrouve automatiquement le master et mémorise son numéro de caméra.';
   if (sony) {
@@ -41,10 +41,10 @@ function update() {
     $('config-note').textContent = 'Déplace le fil DATA des LED sur le GPIO choisi de la C3 Mini. GPIO18 est réservé à son USB. Le profil écoute les états REC sans déclencher d’enregistrement.';
   }
   const rgb = !master && !sony && $('leds').value === 'receiver-rgb';
-  for (const id of ['rgb-order', 'rgb-order-label', 'rgb-brightness', 'rgb-brightness-label']) $(id).hidden = !rgb;
+  for (const id of ['rgb-order', 'rgb-order-label']) $(id).hidden = !rgb;
   $('receiver-fields').querySelector('.color-key').hidden = !rgb;
   $('password').disabled = $('open-wifi').checked;
-  $('led-hint').textContent = $('leds').value === 'receiver-rgb' ? 'Les deux RGB affichent le même état. Caméra au repos : éteintes. ATEM indisponible : bleu clignotant.' : 'La LED intégrée reste fixe en Programme et clignote en Preview. Sorties externes rouge GPIO16 et verte GPIO17.';
+  $('led-hint').textContent = $('leds').value === 'receiver-rgb' ? 'Les deux RGB suivent la luminosité du master. Caméra au repos : éteintes. ATEM indisponible : bleu clignotant.' : 'La LED intégrée reste fixe en Programme et clignote en Preview. Sorties externes rouge GPIO16 et verte GPIO17.';
   $('flash').replaceChildren(document.createTextNode(simulation ? 'Simuler le flash' : sony ? 'Flasher Tally Sony' : master ? 'Flasher le master' : 'Flasher le récepteur'));
   const arrow = document.createElement('span'); arrow.textContent = '↗'; $('flash').append(arrow);
   for (const id of ['flash', 'check', 'refresh', 'nav-master', 'nav-receiver', 'nav-sony', 'port', 'quit']) $(id).disabled = running || starting || !connected;
@@ -105,7 +105,7 @@ async function start(checkOnly) {
   const sony = role === 'sony-c3';
   const body = sony ? {role, port:$('port').value, board:$('sony-board').value, sony_name:$('sony-name').value, sony_mac:$('sony-mac').value.trim(), sony_pin:$('sony-pin').value, sony_pixels:$('sony-pixels').value, rgb_order:$('sony-order').value} :
     {role: role === 'master' ? 'master' : $('leds').value, port: $('port').value,
-    ssid: $('ssid').value, password: $('open-wifi').checked ? '' : $('password').value, atem: $('atem').value, inputs: $('inputs').value, camera: $('camera').value, open_wifi:$('open-wifi').checked, rgb_order:$('rgb-order').value, rgb_brightness:$('rgb-brightness').value};
+    ssid: $('ssid').value, password: $('open-wifi').checked ? '' : $('password').value, atem: $('atem').value, inputs: $('inputs').value, camera: $('camera').value, open_wifi:$('open-wifi').checked, rgb_order:$('rgb-order').value, brightness:$('master-brightness').value};
   starting = true; localError = false; update();
   $('status-title').textContent = 'Préparation…'; $('status-message').textContent = 'Vérification du firmware et des réglages.';
   try {

@@ -15,6 +15,9 @@ WebServer web(80);
 ATEMmin atem;
 String ssid, password, atemAddress;
 uint8_t cameraInputs = tally::kInputs;
+constexpr uint8_t kBrightnessButtonPin = 7;
+uint8_t brightness = tally::kDefaultBrightness;
+tally::BrightnessButton brightnessButton;
 bool demo = false, configOpen = false, hadWifi = false;
 bool radioReady = false;
 bool longRangeEnabled = false;
@@ -94,7 +97,11 @@ void setup() {
   delay(500); // USB CDC; never wait for a computer to boot.
   pinMode(15, OUTPUT);
   pinMode(0, INPUT_PULLUP);
+  pinMode(kBrightnessButtonPin, INPUT_PULLUP);
+  brightnessButton.begin(digitalRead(kBrightnessButtonPin) == LOW, millis());
   prefs.begin("tally-master", false);
+  brightness = prefs.getUChar("rgb_level", tally::kDefaultBrightness);
+  if (!tally::validBrightness(brightness)) brightness = tally::kDefaultBrightness;
   ssid = prefs.getString("ssid", "");
   password = prefs.getString("password", "");
   atemAddress = prefs.getString("atem", "");
@@ -125,6 +132,11 @@ void setup() {
 
 void loop() {
   const uint32_t now = millis();
+  if (brightnessButton.update(digitalRead(kBrightnessButtonPin) == LOW, now)) {
+    brightness = tally::nextBrightness(brightness);
+    prefs.putUChar("rgb_level", brightness);
+    Serial.printf("LUMINOSITE %u%% (%u/255)\n", tally::brightnessPercent(brightness), brightness);
+  }
   if (digitalRead(0) == LOW) {
     if (!buttonAt) buttonAt = now;
     if (now - buttonAt >= 2000) openConfig();
@@ -165,6 +177,7 @@ void loop() {
   sampledAt = now;
   tally::Packet packet;
   packet.demo = demo;
+  packet.brightness = brightness;
   uint8_t channel = 1;
   wifi_second_chan_t secondary;
   esp_wifi_get_channel(&channel, &secondary);
@@ -184,7 +197,8 @@ void loop() {
   // The configured physical inputs limit the broadcast, never ATEM's topology.
   for (uint8_t i = cameraInputs; i < tally::kInputs; ++i) packet.flags[i] = 0;
   const bool changed = packet.ready != previous.ready || packet.demo != previous.demo ||
-      packet.channel != previous.channel || memcmp(packet.flags, previous.flags, tally::kInputs);
+      packet.channel != previous.channel || packet.brightness != previous.brightness ||
+      memcmp(packet.flags, previous.flags, tally::kInputs);
   if (radioReady && (changed || now - sentAt >= tally::kHeartbeatMs)) {
     packet.sequence = ++sequence;
     const auto result = esp_now_send(broadcastMac, reinterpret_cast<const uint8_t*>(&packet), sizeof(packet));
@@ -199,12 +213,13 @@ void loop() {
   digitalWrite(15, packet.ready ? HIGH : ((now / 500) % 2));
   if (now - statusAt >= 5000) {
     statusAt = now;
-    Serial.printf("STATUS fw=local-app-2 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
+    Serial.printf("STATUS fw=local-app-3 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
         wifi, WiFi.localIP().toString().c_str(), atemAddress.c_str(),
         atem.isConnected(), atem.isRejected(), atem.hasInitialized(),
         atem.getTallyByIndexSources(), packet.ready, packet.demo, packet.channel,
         static_cast<unsigned long>(syncRetries), static_cast<unsigned long>(now / 1000));
-    Serial.printf("CONFIG camera_inputs=%u\n", cameraInputs);
+    Serial.printf("CONFIG camera_inputs=%u luminosite=%u%% rgb_level=%u\n",
+        cameraInputs, tally::brightnessPercent(brightness), brightness);
     const auto& d = atem.diagnostics;
     Serial.printf("LINK rssi=%d sessions=%lu rx=%lu payloads=%lu resend=%lu gaps=%lu malformed=%lu cmd_errors=%lu socket_errors=%lu incm=%u last_id=%u age_ms=%lu espnow=%u queued=%lu tx_errors=%lu\n",
         WiFi.RSSI(), (unsigned long)d.sessions, (unsigned long)d.received,

@@ -6,7 +6,7 @@ namespace tally {
 struct Rgb { uint8_t r, g, b; };
 constexpr uint8_t kRgbDataPin = 18;
 constexpr uint8_t kRgbPixels = 2;
-constexpr uint8_t kDefaultRgbLevel = 130;
+constexpr uint8_t kDefaultRgbLevel = kDefaultBrightness;
 inline Rgb rgbStatus(State state, uint32_t now, uint8_t level) {
   switch (state) {
     case State::Program: return {level, 0, 0};

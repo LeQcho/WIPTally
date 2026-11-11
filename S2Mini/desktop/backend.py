@@ -71,6 +71,10 @@ def validate(data):
         if address.is_unspecified or address.is_multicast or int(address) == 0xffffffff:
             raise ValueError("L'adresse ATEM doit désigner un appareil du réseau local.")
         result.update(ssid=ssid, password=password, atem=str(address), inputs=integer(data.get("inputs", 8), "Nombre de caméras"))
+        level = RGB_LEVELS.get(str(data.get("brightness", "50")))
+        if level is None:
+            raise ValueError("Choisir une luminosité de départ de 25, 50, 75 ou 100 %.")
+        result["rgb_level"] = level
     else:
         result["camera"] = integer(data.get("camera", 1), "Numéro de caméra")
         result["rgb_order"] = data.get("rgb_order", "RGB")
@@ -99,6 +103,7 @@ def settings_rows(config):
                 ("password", "data", "string", config["password"]),
                 ("atem", "data", "string", config["atem"]),
                 ("inputs", "data", "u8", config["inputs"]),
+                ("rgb_level", "data", "u8", config["rgb_level"]),
                 ("demo", "data", "u8", 0)]
     rows = [("tally-rx", "namespace", "", ""), ("camera", "data", "u8", config["camera"])]
     if config["role"] == "receiver-rgb":

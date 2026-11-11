@@ -24,5 +24,14 @@ void checkLevel(uint8_t level) {
 int main() {
   assert(tally::kDefaultRgbLevel == 130);
   for (uint8_t level : {64, 130, 191, 255}) checkLevel(level);
+  tally::Packet transmitted, received;
+  transmitted.ready = 1;
+  transmitted.flags[0] = 1;
+  for (uint8_t level : {64, 130, 191, 255}) {
+    transmitted.brightness = level;
+    assert(tally::decode(reinterpret_cast<const uint8_t*>(&transmitted), sizeof(transmitted), received));
+    const auto rgb = tally::rgbStatus(tally::state(received, 1, true, 0), 0, received.brightness);
+    assert(rgb.r == level && rgb.g == 0 && rgb.b == 0);
+  }
   puts("RGB: four levels, search, preview, program priority, timeout, offline and idle: PASS");
 }
