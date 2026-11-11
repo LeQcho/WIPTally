@@ -16,6 +16,7 @@ inline uint8_t lowByte(uint16_t x) { return x; }
 #define HEX 16
 #define B00000111 7
 struct SerialStub {
+  template <class... T> void printf(T...) {}
   template <class... T> void print(T...) {}
   template <class... T> void println(T...) {}
 };

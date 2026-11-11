@@ -9,6 +9,7 @@
 #include "tally.h"
 #include "atem_sync_guard.h"
 #include "espnow_radio.h"
+#include "oled_status.h"
 
 Preferences prefs;
 WebServer web(80);
@@ -18,6 +19,7 @@ uint8_t cameraInputs = tally::kInputs;
 constexpr uint8_t kBrightnessButtonPin = 7;
 uint8_t brightness = tally::kDefaultBrightness;
 tally::BrightnessButton brightnessButton;
+tally::OledStatus oled;
 bool demo = false, configOpen = false, hadWifi = false;
 bool radioReady = false;
 bool longRangeEnabled = false;
@@ -108,6 +110,7 @@ void setup() {
   demo = prefs.getBool("demo", false);
   cameraInputs = prefs.getUChar("inputs", tally::kInputs);
   if (cameraInputs < 1 || cameraInputs > tally::kInputs) cameraInputs = tally::kInputs;
+  oled.begin(millis());
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   const auto protocol = tally::enableLongRange();
@@ -173,6 +176,10 @@ void loop() {
     Serial.println("Nouvelle tentative Wi-Fi; BOOT 2s pour configurer.");
   }
   hadWifi = wifi;
+  const auto sourcesForDisplay = atem.getTallyByIndexSources();
+  const bool displayReady = wifi && atem.streamHealthy() && atem.hasInitialized() &&
+      sourcesForDisplay > 0 && sourcesForDisplay <= tally::kInputs;
+  oled.tick(millis(), {wifi, displayReady, demo, brightness, atemAddress.c_str(), ssid.c_str()});
   if (now - sampledAt < 20) { delay(1); return; }
   sampledAt = now;
   tally::Packet packet;
@@ -213,7 +220,7 @@ void loop() {
   digitalWrite(15, packet.ready ? HIGH : ((now / 500) % 2));
   if (now - statusAt >= 5000) {
     statusAt = now;
-    Serial.printf("STATUS fw=local-app-3 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
+    Serial.printf("STATUS fw=master-1.6.0 wifi=%u ip=%s atem=%s connected=%u rejected=%u initialized=%u tally_inputs=%u ready=%u demo=%u canal=%u sync_retries=%lu uptime_s=%lu\n",
         wifi, WiFi.localIP().toString().c_str(), atemAddress.c_str(),
         atem.isConnected(), atem.isRejected(), atem.hasInitialized(),
         atem.getTallyByIndexSources(), packet.ready, packet.demo, packet.channel,

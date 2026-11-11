@@ -14,6 +14,8 @@ Si macOS bloque le lancement d'une application locale non signée, le lanceur `.
 
 ## Préparer un master
 
+Depuis la version 1.6, le profil Master inclut l’[écran OLED SSD1306 facultatif](ECRAN-OLED.md). Il est détecté automatiquement au démarrage ; aucun champ à renseigner pour l’écran.
+
 1. Choisir **Master**.
 2. Choisir la **luminosité de départ** des récepteurs et saisir le SSID **2,4 GHz**, le mot de passe Wi-Fi, l'adresse IPv4 de l'ATEM et le **nombre d'entrées caméra utilisées**, entre 1 et 40. Le mot de passe est requis, sauf si la case « Réseau ouvert, sans mot de passe » est explicitement cochée.
 3. Brancher la S2 Mini destinée à devenir master et sélectionner son port USB.

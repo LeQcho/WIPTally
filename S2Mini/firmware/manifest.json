@@ -7,7 +7,7 @@
   "sha256": {
     "boot_app0.bin": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0",
     "master/bootloader.bin": "34d00eaa9ea72a54d1319d8a91f3b6c3acccf9478e85ba4c75f97034749dc977",
-    "master/firmware.bin": "a8644a293ed441ec878172ae08566aa2dcb2ea7a8ec5f22350ade4a7a001bcfc",
+    "master/firmware.bin": "e80f29e00b2b41c9363cf7841926457bf8cb0697985c7c084341b8232f4208d9",
     "master/partitions.bin": "148b959cbff1c38aa8e1d5c0ba9d612c54997b945e56a63f41223eef650653a1",
     "receiver/bootloader.bin": "34d00eaa9ea72a54d1319d8a91f3b6c3acccf9478e85ba4c75f97034749dc977",
     "receiver/firmware.bin": "f72c48dcf31e9d972776ba7bf8944ce4e41836643fbef72b080b8dd45973a290",
@@ -23,6 +23,8 @@
     "include/atem_sync_guard.h": "242eefe2e589b7dbb0a8d71c5c8219374f6654964ff7b7b700aeda17cf0bf6b4",
     "include/brightness.h": "7ae63ad842bda66bd94d008c47e4042b50d7dbf8cb744cc7ab1c35faa186b906",
     "include/espnow_radio.h": "d7ac7d5bb7d5034ad7bfe4b6b97fa6d2039bc44d10e9243046a0fb8b9948da70",
+    "include/oled_pages.h": "f6b4f078dcb0d5f3acce493398b5e5355a91afdfa0db77a610fe62dea4b9f9a9",
+    "include/oled_status.h": "d561647ec45a5eda5eea4def2b7347bcf875f434b548f66493acedab90d43f31",
     "include/rgb_status.h": "c69811d252b70ec9effdf9bb9ade0c275f7c77c15f27938552d14f495acd92eb",
     "include/sony_status.h": "a268d00a266233074bc640f0e0990d6cadb4be323c473c843f1e71c39a807c25",
     "include/tally.h": "9fa2f733f74b2ce91c301293b0d820f6308b8df0ddc9a60721db999b27192fa3",
@@ -38,8 +40,8 @@
     "lib/Adafruit_NeoPixel/kendyte_k210.c": "7d807d22f36521d1ad9f10f78396c6c750d4c6ad306c2c230cc17403f9b26a0e",
     "lib/Adafruit_NeoPixel/rp2040_pio.h": "0f0dda6e8824b83a368daff759a0693dc61dadc3314263418de200089e7fffed",
     "lib/SkaarhojPgmspace/SkaarhojPgmspace.h": "fd54ef150f88f786b02184a84ef3132eca3bac67c24a879d3a2e14f53a79da6a",
-    "platformio.ini": "02db10defc8ee2d38fb6c83e0cf5d57658536c16f690a1b46422d84d5b06b953",
-    "src/master.cpp": "2bf7036b1d10a183902f69662a2511723f1c69b2fe2df0f5de7dc20892b94100",
+    "platformio.ini": "6a53eeb2a7faa0d12ba29693ef02af12b4e71ccb3ea8e73b49a105dd2da10404",
+    "src/master.cpp": "acaaeaffbbc7771c6b0e4e688994e9142c6d03a090f3733f45c8928999b71319",
     "src/receiver.cpp": "131e6d2ed513c3617ce2f3c49b4dc147e5459285b56806854bcc80603010ed0f",
     "src/sony.cpp": "1b9b4b457812f293c819c136d4a8a375f44ec16ef6adef4aca57550abe3a9a55"
   },

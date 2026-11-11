@@ -1,6 +1,6 @@
 # WIPTally
 
-Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** rejoint le Wi-Fi 2,4 GHz et transmet les états Programme et Preview aux récepteurs via ESP-NOW. **Tally Atelier** configure et flashe les cartes en USB. La version 1.5 utilise ESP-NOW Long Range et transmet la luminosité choisie sur le master à tous les récepteurs RGB.
+Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** rejoint le Wi-Fi 2,4 GHz et transmet les états Programme et Preview aux récepteurs via ESP-NOW. **Tally Atelier** configure et flashe les cartes en USB. La version 1.6 conserve ESP-NOW Long Range et la luminosité commandée depuis le master, et ajoute un écran OLED facultatif au master.
 
 ![Boîtier V4 avec quatre vis au couvercle et diffuseurs plats](hardware/boitier-tally/V4/apercu_geometrie_V4.png)
 
@@ -13,6 +13,8 @@ Voyants tally sans fil pour mélangeur Blackmagic ATEM. Une **LOLIN S2 Mini** re
 5. Relier l'ATEM au routeur en Ethernet. Vérifier Programme, Preview et la reprise après une coupure réseau.
 
 Pour passer à la version 1.5, flasher les récepteurs avant le master.
+
+La version **1.6** ajoute un **OLED SSD1306 I²C 128 × 64** : IP/état ATEM, réseau/état Wi-Fi et luminosité, en trois pages de 15 secondes. Seul le master doit être mis à jour si les récepteurs sont déjà en 1.5. [Câblage et guide OLED](S2Mini/ECRAN-OLED.md).
 
 [Guide de démarrage](S2Mini/COMMENCER-ICI.md) · [Application](S2Mini/APPLICATION.md) · [Configuration et dépannage ATEM](S2Mini/README.fr.md) · [Câblage WS2812](S2Mini/LED-RGB.md) · [Bouton de luminosité du master](S2Mini/BOUTON-LUMINOSITE.md)
 

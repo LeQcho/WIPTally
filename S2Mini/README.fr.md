@@ -71,6 +71,8 @@ Le master suit le canal du point d'accès Wi-Fi. Les récepteurs parcourent auto
 
 ## ESP-NOW Long Range
 
+Le master 1.6 inclut aussi un [écran d’information OLED SSD1306 facultatif](ECRAN-OLED.md), sans modification du protocole radio 1.5. Les récepteurs en 1.5 restent compatibles.
+
 Le master 1.4 configure le débit radio **Long Range à 250 kbit/s** pour les trames ESP-NOW. Sa connexion au routeur utilise les protocoles Wi-Fi habituels. Les récepteurs 1.4 acceptent les trames Long Range et standard sur le canal du master. Si le pilote refuse le débit Long Range, le master tente le débit standard et indique le résultat dans le journal série.
 
 Pour passer d’une version antérieure à 1.4, flasher **les récepteurs d’abord, puis le master**. Les anciens récepteurs ne sont pas prévus pour décoder les trames Long Range du nouveau master. Après la mise à jour, contrôler les messages Long Range au démarrage, puis tester les changements Programme/Preview à la distance d’utilisation. Les compilations et tests hôtes vérifient le logiciel. La portée se mesure sur les cartes en conditions réelles.
